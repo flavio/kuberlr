@@ -20,6 +20,9 @@
 # Main project binary
 /kuberlr
 
+# go releaser artifacts directory
+dist/
+
 # vim swap files
 *.swp
 
