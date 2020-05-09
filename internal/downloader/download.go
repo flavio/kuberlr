@@ -9,14 +9,17 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/schollz/progressbar/v3"
 )
 
-func KubectlDownloadURL(version string) (string, error) {
+func KubectlDownloadURL(v semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
 	u, err := url.Parse(fmt.Sprintf(
-		"https://storage.googleapis.com/kubernetes-release/release/v%s/bin/%s/%s/kubectl",
-		version,
+		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl",
+		v.Major,
+		v.Minor,
+		v.Patch,
 		runtime.GOOS,
 		runtime.GOARCH,
 	))

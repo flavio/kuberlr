@@ -2,6 +2,8 @@ package kubectl_versioner
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,30 +12,13 @@ import (
 	"github.com/flavio/kuberlr/internal/downloader"
 
 	"github.com/blang/semver"
-	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/klog"
 )
 
-func SanitizedVersion(v *version.Info) string {
-	// We need patch level too, which is not exposed as a string
-	// value unlike v.Major and v.Minor.
-	// We have to parse the GitVersion for that
-	sv, err := semver.ParseTolerant(v.GitVersion)
-	if err != nil {
-		klog.Warningf(
-			"Failed to parse remote API GitVersion",
-			v.GitVersion,
-			"with error",
-			err,
-		)
-		return fmt.Sprintf("%s.%s.0", v.Major, v.Minor)
-	}
+const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
 
-	return fmt.Sprintf("%s.%s.%d", v.Major, v.Minor, sv.Patch)
-}
-
-func BuildKubectNameFromVersion(v *version.Info) string {
-	return fmt.Sprintf("kubectl-%s", SanitizedVersion(v))
+func BuildKubectNameFromVersion(v semver.Version) string {
+	return fmt.Sprintf("kubectl-%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
 func LocalDownloadDir() string {
@@ -57,7 +42,7 @@ func SetupLocalDirs() error {
 	return os.MkdirAll(LocalDownloadDir(), os.ModePerm)
 }
 
-func EnsureKubectlIsAvailable(v *version.Info) (string, error) {
+func EnsureKubectlIsAvailable(v semver.Version) (string, error) {
 	filename := filepath.Join(
 		LocalDownloadDir(),
 		BuildKubectNameFromVersion(v))
@@ -71,7 +56,7 @@ func EnsureKubectlIsAvailable(v *version.Info) (string, error) {
 		return "", err
 	}
 
-	downloadUrl, err := downloader.KubectlDownloadURL(SanitizedVersion(v))
+	downloadUrl, err := downloader.KubectlDownloadURL(v)
 	if err != nil {
 		return "", err
 	}
@@ -82,4 +67,59 @@ func EnsureKubectlIsAvailable(v *version.Info) (string, error) {
 		return "", err
 	}
 	return filename, nil
+}
+
+func MostRecentKubectlDownloaded() (semver.Version, error) {
+	var versions []semver.Version
+
+	kubectlBins, err := ioutil.ReadDir(LocalDownloadDir())
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = &NoVersionFoundError{}
+		}
+		return semver.Version{}, err
+	}
+
+	for _, f := range kubectlBins {
+		var major, minor, patch uint64
+		n, err := fmt.Sscanf(f.Name(), "kubectl-%d.%d.%d", &major, &minor, &patch)
+		if n == 3 && err == nil {
+			sv := semver.Version{
+				Major: major,
+				Minor: minor,
+				Patch: patch,
+			}
+			versions = append(versions, sv)
+		}
+	}
+
+	if len(versions) == 0 {
+		return semver.Version{}, &NoVersionFoundError{}
+	}
+
+	semver.Sort(versions)
+	return versions[len(versions)-1], nil
+}
+
+func UpstreamStableVersion() (semver.Version, error) {
+	res, err := http.Get(KUBECTL_STABLE_URL)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return semver.Version{},
+			fmt.Errorf(
+				"GET %s returned http status %s",
+				KUBECTL_STABLE_URL,
+				res.Status,
+			)
+	}
+
+	v, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	return semver.ParseTolerant(string(v))
 }

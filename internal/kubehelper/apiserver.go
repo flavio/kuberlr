@@ -1,15 +1,19 @@
 package kubehelper
 
 import (
-	"k8s.io/apimachinery/pkg/version"
+	"github.com/blang/semver"
 )
 
 // ApiVersion returns the version of the remote kubernetes API server
-func ApiVersion() (*version.Info, error) {
+func ApiVersion() (semver.Version, error) {
 	client, err := createKubeClient()
 	if err != nil {
-		return nil, err
+		return semver.Version{}, err
 	}
 
-	return client.DiscoveryClient.ServerVersion()
+	v, err := client.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return semver.Version{}, err
+	}
+	return semver.ParseTolerant(v.GitVersion)
 }
