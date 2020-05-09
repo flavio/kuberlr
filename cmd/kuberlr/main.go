@@ -1,18 +1,15 @@
 package main
 
 import (
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 
-	"github.com/blang/semver"
 	"github.com/spf13/cobra"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
 	"github.com/flavio/kuberlr/internal/kubectl_versioner"
-	"github.com/flavio/kuberlr/internal/kubehelper"
 	"k8s.io/klog"
 )
 
@@ -48,7 +45,7 @@ func newRootCmd() *cobra.Command {
 }
 
 func kubectlWrapperMode() {
-	version, err := kubectlVersionToUse()
+	version, err := kubectl_versioner.KubectlVersionToUse()
 	if err != nil {
 		klog.Fatal(err)
 	}
@@ -61,29 +58,4 @@ func kubectlWrapperMode() {
 	childArgs := append([]string{kubectlBin}, os.Args[1:]...)
 	err = syscall.Exec(kubectlBin, childArgs, os.Environ())
 	klog.Fatal(err)
-}
-
-func kubectlVersionToUse() (semver.Version, error) {
-	version, err := kubehelper.ApiVersion()
-	if err != nil && isTimeout(err) {
-		// the remote server is unreachable, let's get
-		// the latest version of kubectl that is available on the system
-		klog.Info("Remote kubernetes server unreachable")
-		version, err = kubectl_versioner.MostRecentKubectlDownloaded()
-		if err != nil && isNoVersionFound(err) {
-			klog.Info("No local kubectl binary found, fetching latest stable release version")
-			version, err = kubectl_versioner.UpstreamStableVersion()
-		}
-	}
-	return version, err
-}
-
-func isTimeout(err error) bool {
-	urlError, ok := err.(*url.Error)
-	return ok && urlError.Timeout()
-}
-
-func isNoVersionFound(err error) bool {
-	nvError, ok := err.(*kubectl_versioner.NoVersionFoundError)
-	return ok && nvError.NoVersionFound()
 }

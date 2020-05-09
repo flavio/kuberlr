@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"net/url"
 	"path/filepath"
-	"runtime"
 
-	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
+	"github.com/flavio/kuberlr/internal/kubehelper"
 
 	"github.com/blang/semver"
 	"k8s.io/klog"
@@ -17,29 +16,29 @@ import (
 
 const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
 
-func BuildKubectNameFromVersion(v semver.Version) string {
-	return fmt.Sprintf("kubectl-%d.%d.%d", v.Major, v.Minor, v.Patch)
-}
-
-func LocalDownloadDir() string {
-	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-
-	return filepath.Join(
-		common.HomeDir(),
-		".kuberlr",
-		platform,
-	)
-}
-
-func IsKubectlAvailable(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false
+func KubectlVersionToUse() (semver.Version, error) {
+	version, err := kubehelper.ApiVersion()
+	if err != nil && isTimeout(err) {
+		// the remote server is unreachable, let's get
+		// the latest version of kubectl that is available on the system
+		klog.Info("Remote kubernetes server unreachable")
+		version, err = MostRecentKubectlDownloaded()
+		if err != nil && isNoVersionFound(err) {
+			klog.Info("No local kubectl binary found, fetching latest stable release version")
+			version, err = UpstreamStableVersion()
+		}
 	}
-	return true
+	return version, err
 }
 
-func SetupLocalDirs() error {
-	return os.MkdirAll(LocalDownloadDir(), os.ModePerm)
+func isTimeout(err error) bool {
+	urlError, ok := err.(*url.Error)
+	return ok && urlError.Timeout()
+}
+
+func isNoVersionFound(err error) bool {
+	nvError, ok := err.(*NoVersionFoundError)
+	return ok && nvError.NoVersionFound()
 }
 
 func EnsureKubectlIsAvailable(v semver.Version) (string, error) {
@@ -61,7 +60,7 @@ func EnsureKubectlIsAvailable(v semver.Version) (string, error) {
 		return "", err
 	}
 
-	klog.Info("Correct kubectl version missing, downloading...")
+	klog.Infof("Right kubectl missing, downloading version %s", v.String())
 	err = downloader.Download(downloadUrl, filename, 0755)
 	if err != nil {
 		return "", err
@@ -70,27 +69,9 @@ func EnsureKubectlIsAvailable(v semver.Version) (string, error) {
 }
 
 func MostRecentKubectlDownloaded() (semver.Version, error) {
-	var versions []semver.Version
-
-	kubectlBins, err := ioutil.ReadDir(LocalDownloadDir())
+	versions, err := LocalKubectlVersions()
 	if err != nil {
-		if os.IsNotExist(err) {
-			err = &NoVersionFoundError{}
-		}
 		return semver.Version{}, err
-	}
-
-	for _, f := range kubectlBins {
-		var major, minor, patch uint64
-		n, err := fmt.Sscanf(f.Name(), "kubectl-%d.%d.%d", &major, &minor, &patch)
-		if n == 3 && err == nil {
-			sv := semver.Version{
-				Major: major,
-				Minor: minor,
-				Patch: patch,
-			}
-			versions = append(versions, sv)
-		}
 	}
 
 	if len(versions) == 0 {
