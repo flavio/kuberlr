@@ -43,6 +43,14 @@ func Download(urlToGet, destination string, mode os.FileMode) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"GET %s returned http status %s",
+			urlToGet,
+			resp.Status,
+		)
+	}
+
 	f, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY, mode)
 	if err != nil {
 		return fmt.Errorf(
