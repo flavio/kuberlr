@@ -30,22 +30,22 @@ CLOSEST_TAG   ?= $(shell git describe --tags)
 VERSION       := $(shell echo $(CLOSEST_TAG) | sed -E 's/v(([0-9]\.?)+).*/\1/')
 TAGS          := development
 PROJECT_PATH  := github.com/flavio/kuberlr
-FRESH_CONTAINER_MONITOR_LDFLAGS  = -ldflags "-X=$(PROJECT_PATH)/pkg/kuberlr.Version=$(VERSION) \
-                           -X=$(PROJECT_PATH)/pkg/kuberlr.BuildDate=$(BUILD_DATE) \
-                           -X=$(PROJECT_PATH)/pkg/kuberlr.Tag=$(TAG) \
-                           -X=$(PROJECT_PATH)/pkg/kuberlr.ClosestTag=$(CLOSEST_TAG)"
+KUBERLR_LDFLAGS  = -ldflags "-X=$(PROJECT_PATH)/pkg/kuberlr.Version=$(VERSION) \
+														-X=$(PROJECT_PATH)/pkg/kuberlr.BuildDate=$(BUILD_DATE) \
+														-X=$(PROJECT_PATH)/pkg/kuberlr.Tag=$(TAG) \
+														-X=$(PROJECT_PATH)/pkg/kuberlr.ClosestTag=$(CLOSEST_TAG)"
 
-FRESH_CONTAINER_MONITOR_DIRS = cmd pkg internal
+KUBERLR_DIRS = cmd pkg internal
 
 # go source files, ignore vendor directory
-FRESH_CONTAINER_MONITOR_SRCS = $(shell find $(FRESH_CONTAINER_MONITOR_DIRS) -type f -name '*.go')
+KUBERLR_SRCS = $(shell find $(KUBERLR_DIRS) -type f -name '*.go')
 
 .PHONY: all
 all: install
 
 .PHONY: build
 build: go-version-check
-	$(GO) build $(GOMODFLAG) $(FRESH_CONTAINER_MONITOR_LDFLAGS) -tags $(TAGS) ./cmd/...
+	$(GO) build $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
 
 MANPAGES_MD := $(wildcard docs/man/*.md)
 MANPAGES    := $(MANPAGES_MD:%.md=%)
@@ -58,7 +58,7 @@ docs: $(MANPAGES)
 
 .PHONY: install
 install: go-version-check
-	$(GO) install $(GOMODFLAG) $(FRESH_CONTAINER_MONITOR_LDFLAGS) -tags $(TAGS) ./cmd/...
+	$(GO) install $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
 
 .PHONY: clean
 clean:
@@ -90,7 +90,7 @@ lint: deps
 	# run go vet
 	$(GO) vet ./...
 	# run go gmt
-	test -z `$(GOFMT) -l $(FRESH_CONTAINER_MONITOR_SRCS)` || { $(GOFMT) -d $(FRESH_CONTAINER_MONITOR_SRCS) && false; }
+	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
 	# run golangci-lint
 	$(BINPATH)/golangci-lint run --verbose --timeout=3m
 
@@ -107,14 +107,6 @@ pre-commit-install:
 pre-commit-uninstall:
 	test -f $(BINPATH)/bin/pre-commit || curl -sfL https://pre-commit.com/install-local.py | HOME=$(BINPATH) python -
 	$(BINPATH)/bin/pre-commit uninstall
-
-.PHONY: suse-package
-suse-package:
-	ci/packaging/suse/rpmfiles_maker.sh "$(VERSION)" "$(TAG)" "$(CLOSEST_TAG)"
-
-.PHONY: suse-changelog
-suse-changelog:
-	ci/packaging/suse/changelog_maker.sh "$(CHANGES)"
 
 # tests
 .PHONY: test
