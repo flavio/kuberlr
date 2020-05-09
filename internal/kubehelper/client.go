@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/flavio/kuberlr/internal/common"
 	"k8s.io/client-go/kubernetes"
@@ -24,6 +25,8 @@ func createKubeClient() (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	// lower the timeout value
+	config.Timeout = 1 * time.Second
 
 	// create the clientset
 	return kubernetes.NewForConfig(config)
