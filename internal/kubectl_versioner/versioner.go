@@ -77,7 +77,7 @@ func EnsureKubectlIsAvailable(v *version.Info) (string, error) {
 	}
 
 	klog.Info("Correct kubectl version missing, downloading...")
-	err = downloader.Download(downloadUrl, filename, 755)
+	err = downloader.Download(downloadUrl, filename, 0755)
 	if err != nil {
 		return "", err
 	}
