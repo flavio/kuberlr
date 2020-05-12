@@ -1,4 +1,4 @@
-package kubectl_versioner
+package versioner
 
 import (
 	"path/filepath"

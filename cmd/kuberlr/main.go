@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
-	"github.com/flavio/kuberlr/internal/kubectl_versioner"
+	kubectl_versioner "github.com/flavio/kuberlr/internal/versioner"
 	"k8s.io/klog"
 )
 
