@@ -4,9 +4,15 @@ import (
 	"os"
 )
 
-func HomeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
+func HomeDirEnvKey() string {
+	_, found := os.LookupEnv("HOME")
+	if found {
+		return "HOME"
 	}
-	return os.Getenv("USERPROFILE") // windows
+
+	return "USERPROFILE" // windows
+}
+
+func HomeDir() string {
+	return os.Getenv(HomeDirEnvKey())
 }

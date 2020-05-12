@@ -3,6 +3,7 @@ package downloader
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,7 +14,44 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-func KubectlDownloadURL(v semver.Version) (string, error) {
+const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
+
+type Downloder struct {
+}
+
+func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
+	res, err := http.Get(KUBECTL_STABLE_URL)
+	if err != nil {
+		return semver.Version{}, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return semver.Version{},
+			fmt.Errorf(
+				"GET %s returned http status %s",
+				KUBECTL_STABLE_URL,
+				res.Status,
+			)
+	}
+
+	v, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	return semver.ParseTolerant(string(v))
+}
+
+func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
+	downloadUrl, err := d.kubectlDownloadURL(version)
+	if err != nil {
+		return err
+	}
+
+	return d.download(downloadUrl, destination, 0755)
+}
+
+func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
 	u, err := url.Parse(fmt.Sprintf(
 		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl",
@@ -30,7 +68,7 @@ func KubectlDownloadURL(v semver.Version) (string, error) {
 	return u.String(), nil
 }
 
-func Download(urlToGet, destination string, mode os.FileMode) error {
+func (d *Downloder) download(urlToGet, destination string, mode os.FileMode) error {
 	req, err := http.NewRequest("GET", urlToGet, nil)
 	if err != nil {
 		return fmt.Errorf(

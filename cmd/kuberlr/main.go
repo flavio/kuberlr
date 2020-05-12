@@ -45,12 +45,13 @@ func newRootCmd() *cobra.Command {
 }
 
 func kubectlWrapperMode() {
-	version, err := kubectl_versioner.KubectlVersionToUse()
+	versioner := kubectl_versioner.NewVersioner()
+	version, err := versioner.KubectlVersionToUse()
 	if err != nil {
 		klog.Fatal(err)
 	}
 
-	kubectlBin, err := kubectl_versioner.EnsureKubectlIsAvailable(version)
+	kubectlBin, err := versioner.EnsureKubectlIsAvailable(version)
 	if err != nil {
 		klog.Fatal(err)
 	}

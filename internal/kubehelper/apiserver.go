@@ -4,8 +4,11 @@ import (
 	"github.com/blang/semver"
 )
 
+type KubeAPI struct {
+}
+
 // ApiVersion returns the version of the remote kubernetes API server
-func ApiVersion() (semver.Version, error) {
+func (k *KubeAPI) Version() (semver.Version, error) {
 	client, err := createKubeClient()
 	if err != nil {
 		return semver.Version{}, err

@@ -1,10 +1,6 @@
 package kubectl_versioner
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"path/filepath"
 
 	"github.com/flavio/kuberlr/internal/downloader"
@@ -14,62 +10,80 @@ import (
 	"k8s.io/klog"
 )
 
-const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
+type localCache interface {
+	LocalDownloadDir() string
+	IsKubectlAvailable(filename string) bool
+	SetupLocalDirs() error
+	LocalKubectlVersions() (semver.Versions, error)
+}
 
-func KubectlVersionToUse() (semver.Version, error) {
-	version, err := kubehelper.ApiVersion()
+type downloadHelper interface {
+	GetKubectlBinary(version semver.Version, destination string) error
+	UpstreamStableVersion() (semver.Version, error)
+}
+
+type kubeAPIHelper interface {
+	Version() (semver.Version, error)
+}
+
+type Versioner struct {
+	cache      localCache
+	downloader downloadHelper
+	apiServer  kubeAPIHelper
+}
+
+func NewVersioner() *Versioner {
+	return &Versioner{
+		cache:      &localCacheHandler{},
+		downloader: &downloader.Downloder{},
+		apiServer:  &kubehelper.KubeAPI{},
+	}
+}
+
+func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
+	version, err := v.apiServer.Version()
 	if err != nil && isTimeout(err) {
 		// the remote server is unreachable, let's get
 		// the latest version of kubectl that is available on the system
 		klog.Info("Remote kubernetes server unreachable")
-		version, err = MostRecentKubectlDownloaded()
+		version, err = v.MostRecentKubectlDownloaded()
 		if err != nil && isNoVersionFound(err) {
 			klog.Info("No local kubectl binary found, fetching latest stable release version")
-			version, err = UpstreamStableVersion()
+			version, err = v.downloader.UpstreamStableVersion()
 		}
 	}
 	return version, err
 }
 
-func isTimeout(err error) bool {
-	urlError, ok := err.(*url.Error)
-	return ok && urlError.Timeout()
+func (v *Versioner) kubectlBinary(version semver.Version) string {
+	return filepath.Join(
+		v.cache.LocalDownloadDir(),
+		BuildKubectNameFromVersion(version))
 }
 
-func isNoVersionFound(err error) bool {
-	nvError, ok := err.(*NoVersionFoundError)
-	return ok && nvError.NoVersionFound()
-}
+func (v *Versioner) EnsureKubectlIsAvailable(version semver.Version) (string, error) {
+	filename := v.kubectlBinary(version)
 
-func EnsureKubectlIsAvailable(v semver.Version) (string, error) {
-	filename := filepath.Join(
-		LocalDownloadDir(),
-		BuildKubectNameFromVersion(v))
-
-	if IsKubectlAvailable(filename) {
+	if v.cache.IsKubectlAvailable(filename) {
 		return filename, nil
 	}
 
+	klog.Infof("Right kubectl missing, downloading version %s", version.String())
+
 	//download the right kubectl to the local cache
-	if err := SetupLocalDirs(); err != nil {
+	if err := v.cache.SetupLocalDirs(); err != nil {
 		return "", err
 	}
 
-	downloadUrl, err := downloader.KubectlDownloadURL(v)
-	if err != nil {
+	if err := v.downloader.GetKubectlBinary(version, filename); err != nil {
 		return "", err
 	}
 
-	klog.Infof("Right kubectl missing, downloading version %s", v.String())
-	err = downloader.Download(downloadUrl, filename, 0755)
-	if err != nil {
-		return "", err
-	}
 	return filename, nil
 }
 
-func MostRecentKubectlDownloaded() (semver.Version, error) {
-	versions, err := LocalKubectlVersions()
+func (v *Versioner) MostRecentKubectlDownloaded() (semver.Version, error) {
+	versions, err := v.cache.LocalKubectlVersions()
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -82,25 +96,14 @@ func MostRecentKubectlDownloaded() (semver.Version, error) {
 	return versions[len(versions)-1], nil
 }
 
-func UpstreamStableVersion() (semver.Version, error) {
-	res, err := http.Get(KUBECTL_STABLE_URL)
-	if err != nil {
-		return semver.Version{}, err
-	}
-	if res.StatusCode != http.StatusOK {
-		return semver.Version{},
-			fmt.Errorf(
-				"GET %s returned http status %s",
-				KUBECTL_STABLE_URL,
-				res.Status,
-			)
-	}
+func isTimeout(err error) bool {
+	t, ok := err.(interface {
+		Timeout() bool
+	})
+	return ok && t.Timeout()
+}
 
-	v, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		return semver.Version{}, err
-	}
-
-	return semver.ParseTolerant(string(v))
+func isNoVersionFound(err error) bool {
+	t, ok := err.(noVersionFound)
+	return ok && t.NoVersionFound()
 }

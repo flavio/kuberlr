@@ -18,7 +18,10 @@ func BuildKubectNameFromVersion(v semver.Version) string {
 	return fmt.Sprintf(KUBECTL_LOCAL_NAMING_SCHEME, v.Major, v.Minor, v.Patch)
 }
 
-func LocalDownloadDir() string {
+type localCacheHandler struct {
+}
+
+func (*localCacheHandler) LocalDownloadDir() string {
 	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
 
 	return filepath.Join(
@@ -28,21 +31,21 @@ func LocalDownloadDir() string {
 	)
 }
 
-func IsKubectlAvailable(filename string) bool {
+func (*localCacheHandler) IsKubectlAvailable(filename string) bool {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
 
-func SetupLocalDirs() error {
-	return os.MkdirAll(LocalDownloadDir(), os.ModePerm)
+func (h *localCacheHandler) SetupLocalDirs() error {
+	return os.MkdirAll(h.LocalDownloadDir(), os.ModePerm)
 }
 
-func LocalKubectlVersions() (semver.Versions, error) {
+func (h *localCacheHandler) LocalKubectlVersions() (semver.Versions, error) {
 	var versions semver.Versions
 
-	kubectlBins, err := ioutil.ReadDir(LocalDownloadDir())
+	kubectlBins, err := ioutil.ReadDir(h.LocalDownloadDir())
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = &NoVersionFoundError{}
@@ -67,6 +70,10 @@ func LocalKubectlVersions() (semver.Versions, error) {
 			}
 			versions = append(versions, sv)
 		}
+	}
+
+	if versions.Len() == 0 {
+		return versions, &NoVersionFoundError{}
 	}
 
 	return versions, nil
