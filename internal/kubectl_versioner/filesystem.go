@@ -12,8 +12,12 @@ import (
 	"github.com/blang/semver"
 )
 
+// KUBECTL_LOCAL_NAMING_SCHEME holds the scheme used to name the kubectl binaries
+// downloaded by kuberlr
 const KUBECTL_LOCAL_NAMING_SCHEME = "kubectl-%d.%d.%d"
 
+// BuildKubectNameFromVersion returns how kuberlr will name the kubectl binary
+// with the specified version
 func BuildKubectNameFromVersion(v semver.Version) string {
 	return fmt.Sprintf(KUBECTL_LOCAL_NAMING_SCHEME, v.Major, v.Minor, v.Patch)
 }

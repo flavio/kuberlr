@@ -58,7 +58,7 @@ func (e *mockTimeoutError) Error() string {
 	return "mock for timeout error"
 }
 
-func (m *mockTimeoutError) Timeout() bool {
+func (e *mockTimeoutError) Timeout() bool {
 	return true
 }
 

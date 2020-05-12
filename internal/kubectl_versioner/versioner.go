@@ -26,12 +26,14 @@ type kubeAPIHelper interface {
 	Version() (semver.Version, error)
 }
 
+// Versioner is used to manage the local kubectl binaries used by kuberlr
 type Versioner struct {
 	cache      localCache
 	downloader downloadHelper
 	apiServer  kubeAPIHelper
 }
 
+// NewVersioner is an helper function that creates a new Versioner instance
 func NewVersioner() *Versioner {
 	return &Versioner{
 		cache:      &localCacheHandler{},
@@ -40,6 +42,9 @@ func NewVersioner() *Versioner {
 	}
 }
 
+// KubectlVersionToUse returns the kubectl version to be used to interact with
+// the remote server. The method takes into account different failure scenarios
+// and acts accordingly.
 func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 	version, err := v.apiServer.Version()
 	if err != nil && isTimeout(err) {
@@ -61,6 +66,9 @@ func (v *Versioner) kubectlBinary(version semver.Version) string {
 		BuildKubectNameFromVersion(version))
 }
 
+// EnsureKubectlIsAvailable ensures the kubectl binary with the specified
+// version is available on the system. It will return the full path to the
+// binary
 func (v *Versioner) EnsureKubectlIsAvailable(version semver.Version) (string, error) {
 	filename := v.kubectlBinary(version)
 
@@ -82,6 +90,8 @@ func (v *Versioner) EnsureKubectlIsAvailable(version semver.Version) (string, er
 	return filename, nil
 }
 
+// MostRecentKubectlDownloaded returns the most recent version of
+// kubectl downloaded by kuberlr
 func (v *Versioner) MostRecentKubectlDownloaded() (semver.Version, error) {
 	versions, err := v.cache.LocalKubectlVersions()
 	if err != nil {

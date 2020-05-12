@@ -14,11 +14,17 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
+// KUBECTL_STABLE_URL URL of the text file used by kubernetes community
+// to hold the latest stable version of kubernetes released
 const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
 
+// Downloder is an helper class that is used to interact with the
+// kubernetes infrastructure holding released binaries and release information
 type Downloder struct {
 }
 
+// UpstreamStableVersion returns the latest version of kubernetes that upstream
+// considers stable
 func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 	res, err := http.Get(KUBECTL_STABLE_URL)
 	if err != nil {
@@ -42,6 +48,8 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 	return semver.ParseTolerant(string(v))
 }
 
+// GetKubectlBinary downloads the kubectl binary identified by the given version
+// to the specified destination
 func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
 	downloadUrl, err := d.kubectlDownloadURL(version)
 	if err != nil {

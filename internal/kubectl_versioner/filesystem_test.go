@@ -1,6 +1,7 @@
 package kubectl_versioner
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -58,7 +59,11 @@ func TestLocalDownloadDir(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
-	defer teardownFilesystemTest(td)
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
 
 	lc := localCacheHandler{}
 	actual := lc.LocalDownloadDir()
@@ -73,7 +78,11 @@ func TestLocalKubectlVersions(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
-	defer teardownFilesystemTest(td)
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
 
 	lc := localCacheHandler{}
 	err = lc.SetupLocalDirs()
@@ -115,7 +124,11 @@ func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
-	defer teardownFilesystemTest(td)
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
 
 	lc := localCacheHandler{}
 	err = lc.SetupLocalDirs()
@@ -134,7 +147,11 @@ func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
-	defer teardownFilesystemTest(td)
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
 
 	lc := localCacheHandler{}
 
