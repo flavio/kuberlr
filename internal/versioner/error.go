@@ -15,8 +15,7 @@ func (e *NoVersionFoundError) Error() string {
 	return "No local kubectl binaries available"
 }
 
-// NoVersionFoundError returns true if the error is a NoVersionFoundError
-// instance
+// NoVersionFound returns true if the error is a NoVersionFoundError instance
 func (e *NoVersionFoundError) NoVersionFound() bool {
 	return true
 }
