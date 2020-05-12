@@ -1,6 +1,6 @@
 | Go Report                                                                                                                                | Unit tests                                                                          | License |
 |------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|---------|
-| [![Go Report Card](https://goreportcard.com/badge/github.com/flavio/kuberlr)](https://goreportcard.com/report/github.com/flavio/kuberlr) | ![tests](https://github.com/flavio/kuberlr/workflows/tests/badge.svg?branch=master) | [![License: Apache 2.0](https://img.shields.io/badge/License-Apache2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0) |
+| [![Go Report Card](https://goreportcard.com/badge/github.com/flavio/kuberlr)](https://goreportcard.com/report/github.com/flavio/kuberlr) | [![tests](https://github.com/flavio/kuberlr/workflows/tests/badge.svg?branch=master)](https://github.com/flavio/kuberlr/actions?query=workflow%3Atests+branch%3Amaster) | [![License: Apache 2.0](https://img.shields.io/badge/License-Apache2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0) |
 
 > One kubectl to rule them all,  
 > one kubectl to find them,  
@@ -64,8 +64,8 @@ syscall and leaves the control to the kubectl binary.
 
 * [ ] I've tested kuberlr only on Linux. It should work also on macOS and on Windows.
   Feedback is welcome.
-* [ ] Provide pre-built binaries for kuberlr (WIP)
-* [ ] Test coverage, code linting,... right now this is a toy project I created
+* [x] Provide pre-built binaries for kuberlr (WIP)
+* [x] Test coverage, code linting,... right now this is a toy project I created
   during a weekend afternoon
 * [ ] Relax the versioning constraint when downloading the kubectl version.
   Right now accessing a kubernetes 1.16.0 and a 1.16.3 cluster would result in two
