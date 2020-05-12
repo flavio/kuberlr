@@ -1,0 +1,22 @@
+name: tests
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.13.x
+      -
+        name: debug
+        run: pwd && ls -la
+      -
+        name: Execute unit tests
+        run: GO111MODULE=on go test -mod=vendor ./...
