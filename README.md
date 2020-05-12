@@ -1,3 +1,7 @@
+| Go Report                                                                                                                                | Unit tests                                                                          | License |
+|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|---------|
+| [![Go Report Card](https://goreportcard.com/badge/github.com/flavio/kuberlr)](https://goreportcard.com/report/github.com/flavio/kuberlr) | ![tests](https://github.com/flavio/kuberlr/workflows/tests/badge.svg?branch=master) | [![License: Apache 2.0](https://img.shields.io/badge/License-Apache2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0) |
+
 > One kubectl to rule them all,  
 > one kubectl to find them,  
 > One kubectl to bring them all  
