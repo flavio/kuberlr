@@ -38,7 +38,7 @@ func CurrentVersion() KuberlrVersion {
 	return kuberlrVersion
 }
 
-// String returns the version infromation nicely formatted
+// String returns the version information nicely formatted
 func (s KuberlrVersion) String() string {
 	if s.Tag == "" {
 		return fmt.Sprintf("kuberlr version: %s %s %s", s.Version, s.BuildDate, s.GoVersion)
