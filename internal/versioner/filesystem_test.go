@@ -160,3 +160,152 @@ func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
 		t.Errorf("Got wrong error type: %T, expected NoVersionFoundError", err)
 	}
 }
+
+func TestFindCompatibleKubectlAlreadyDownloadedLowerBoundMatch(t *testing.T) {
+	td, err := setupFilesystemTest()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
+
+	lc := localCacheHandler{}
+	err = lc.SetupLocalDirs()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+
+	versions := semver.Versions{
+		semver.MustParse("1.4.2"),
+		semver.MustParse("2.1.3"),
+	}
+	expected := versions[0]
+
+	for _, v := range versions {
+		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
+			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
+		}
+	}
+
+	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.5.13"))
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	if !actual.Equals(expected) {
+		t.Errorf("Got %v instead of %v", actual, expected)
+	}
+}
+
+func TestFindCompatibleKubectlAlreadyDownloadedUpperBoundMatch(t *testing.T) {
+	td, err := setupFilesystemTest()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
+
+	lc := localCacheHandler{}
+	err = lc.SetupLocalDirs()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+
+	versions := semver.Versions{
+		semver.MustParse("1.4.2"),
+		semver.MustParse("2.1.3"),
+	}
+	expected := versions[1]
+
+	for _, v := range versions {
+		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
+			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
+		}
+	}
+
+	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("2.1.0"))
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	if !actual.Equals(expected) {
+		t.Errorf("Got %v instead of %v", actual, expected)
+	}
+}
+
+func TestFindCompatibleKubectlAlreadyDownloadedMostRecentCompatibleVersion(t *testing.T) {
+	td, err := setupFilesystemTest()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
+
+	lc := localCacheHandler{}
+	err = lc.SetupLocalDirs()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+
+	versions := semver.Versions{
+		semver.MustParse("1.4.2"),
+		semver.MustParse("1.5.13"),
+		semver.MustParse("2.1.3"),
+	}
+	expected := versions[1]
+
+	for _, v := range versions {
+		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
+			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
+		}
+	}
+
+	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.4.0"))
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	if !actual.Equals(expected) {
+		t.Errorf("Got %v instead of %v", actual, expected)
+	}
+}
+
+func TestFindCompatibleKubectlAlreadyDownloadedNoMatchFound(t *testing.T) {
+	td, err := setupFilesystemTest()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+	defer func() {
+		if err := teardownFilesystemTest(td); err != nil {
+			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		}
+	}()
+
+	lc := localCacheHandler{}
+	err = lc.SetupLocalDirs()
+	if err != nil {
+		t.Errorf("Unexpeted failure: %v", err)
+	}
+
+	versions := semver.Versions{
+		semver.MustParse("1.4.2"),
+		semver.MustParse("2.1.3"),
+	}
+
+	for _, v := range versions {
+		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
+			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
+		}
+	}
+
+	_, err = lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.2.10"))
+	if !isNoVersionFound(err) {
+		t.Errorf("Expected error not found")
+	}
+}

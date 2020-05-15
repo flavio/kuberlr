@@ -75,10 +75,57 @@ func (h *localCacheHandler) LocalKubectlVersions() (semver.Versions, error) {
 			versions = append(versions, sv)
 		}
 	}
+	semver.Sort(versions)
 
 	if versions.Len() == 0 {
 		return versions, &NoVersionFoundError{}
 	}
-
 	return versions, nil
+}
+
+func (h *localCacheHandler) FindCompatibleKubectlAlreadyDownloaded(requestedVersion semver.Version) (semver.Version, error) {
+	versions, err := h.LocalKubectlVersions()
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	if versions.Len() == 0 {
+		return semver.Version{}, &NoVersionFoundError{}
+	}
+
+	lowerBound := lowerBoundVersion(requestedVersion)
+	upperBound := upperBoundVersion(requestedVersion)
+	rangeRule := fmt.Sprintf(">=%s <%s", lowerBound.String(), upperBound.String())
+
+	validRange, err := semver.ParseRange(rangeRule)
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	for i := len(versions) - 1; i >= 0; i -= 1 {
+		if validRange(versions[i]) {
+			return versions[i], nil
+		}
+	}
+
+	return semver.Version{}, &NoVersionFoundError{}
+}
+
+func lowerBoundVersion(v semver.Version) semver.Version {
+	res := v
+
+	res.Patch = 0
+	if v.Minor > 0 {
+		res.Minor = v.Minor - 1
+	}
+
+	return res
+}
+
+func upperBoundVersion(v semver.Version) semver.Version {
+	return semver.Version{
+		Major: v.Major,
+		Minor: v.Minor + 2,
+		Patch: 0,
+	}
 }

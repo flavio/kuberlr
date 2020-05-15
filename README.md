@@ -48,14 +48,19 @@ the right version of `kubectl` is used.
 
 kuberlr connects to the API server of your kubernetes cluster and figures
 out its version.
-The kubernetes cluster to talk with is obtained by looking at the `KUBECONFIG`
-environment variable or at `~/.kube/config`.
 
-Once the version of the remote server is know, kuberlr looks for the following
-binary: `~/.kuberlr/<GOOS>-<GOARCH>/kubectl-<remote server major version>.<remote server minor version>-<remote server patch level>`
+kuberlr obtains the url of the kubernetes cluster either by looking at the
+`~/.kube/config` file or by reading the contents of the file referenced by
+the `KUBECONFIG` environment variable.
 
-If the kubectl binary does not exist, kuberlr will download it from the
+Once the version of the remote server is know, kuberlr looks for a compatible
+version under the `~/.kuberlr/<GOOS>-<GOARCH>/` directory.
+
+kuberlr reuses an already existing binary if it respects the kubectl
+version skew policy, otherwise it downloads the right one from the
 [upstream mirror](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
+kuberlr downloads the kubectl binary to the following destination:
+`~/.kuberlr/<GOOS>-<GOARCH>/kubectl-<remote server major version>.<remote server minor version>.<remote server patch level>`
 
 Finally kuberlr performs an [execve(2)](https://www.unix.com/man-page/bsd/2/EXECVE/)
 syscall and leaves the control to the kubectl binary.
@@ -67,7 +72,7 @@ syscall and leaves the control to the kubectl binary.
 * [x] Provide pre-built binaries for kuberlr (WIP)
 * [x] Test coverage, code linting,... right now this is a toy project I created
   during a weekend afternoon
-* [ ] Relax the versioning constraint when downloading the kubectl version.
+* [x] Relax the versioning constraint when downloading the kubectl version.
   Right now accessing a kubernetes 1.16.0 and a 1.16.3 cluster would result in two
   kubectl binaries being downloaded, while it would just be fine to use the latest
   one

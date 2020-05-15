@@ -7,18 +7,14 @@ import (
 )
 
 type mockLocalCache struct {
-	localDownloadDir     func() string
-	isKubectlAvailable   func(filename string) bool
-	setupLocalDirs       func() error
-	localKubectlVersions func() (semver.Versions, error)
+	localDownloadDir                       func() string
+	setupLocalDirs                         func() error
+	localKubectlVersions                   func() (semver.Versions, error)
+	findCompatibleKubectlAlreadyDownloaded func(requestedVersion semver.Version) (semver.Version, error)
 }
 
 func (m *mockLocalCache) LocalDownloadDir() string {
 	return m.localDownloadDir()
-}
-
-func (m *mockLocalCache) IsKubectlAvailable(filename string) bool {
-	return m.isKubectlAvailable(filename)
 }
 
 func (m *mockLocalCache) SetupLocalDirs() error {
@@ -27,6 +23,10 @@ func (m *mockLocalCache) SetupLocalDirs() error {
 
 func (m *mockLocalCache) LocalKubectlVersions() (semver.Versions, error) {
 	return m.localKubectlVersions()
+}
+
+func (m *mockLocalCache) FindCompatibleKubectlAlreadyDownloaded(requestedVersion semver.Version) (semver.Version, error) {
+	return m.findCompatibleKubectlAlreadyDownloaded(requestedVersion)
 }
 
 type mockDownloader struct {
@@ -67,8 +67,8 @@ func TestMostRecentKubectlDownloadedPopulatedCache(t *testing.T) {
 	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
 		return semver.Versions{
 			semver.MustParse("1.2.0"),
-			semver.MustParse("1.9.0"),
 			semver.MustParse("1.2.3"),
+			semver.MustParse("1.9.0"),
 		}, nil
 	}
 
@@ -91,7 +91,7 @@ func TestMostRecentKubectlDownloadedPopulatedCache(t *testing.T) {
 func TestMostRecentKubectlDownloadedEmptyCache(t *testing.T) {
 	localCacheMock := mockLocalCache{}
 	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{}, nil
+		return semver.Versions{}, &NoVersionFoundError{}
 	}
 
 	versioner := Versioner{
@@ -111,7 +111,9 @@ func TestMostRecentKubectlDownloadedEmptyCache(t *testing.T) {
 func TestEnsureKubectlIsAvailableLocalBinaryFound(t *testing.T) {
 	localCacheMock := mockLocalCache{}
 	localCacheMock.localDownloadDir = func() string { return "/fake" }
-	localCacheMock.isKubectlAvailable = func(f string) bool { return true }
+	localCacheMock.findCompatibleKubectlAlreadyDownloaded = func(v semver.Version) (semver.Version, error) {
+		return semver.MustParse("1.9.0"), nil
+	}
 
 	versioner := Versioner{
 		cache: &localCacheMock,
@@ -133,7 +135,10 @@ func TestEnsureKubectlIsAvailableLocalBinaryNotFound(t *testing.T) {
 	setupLocalDirsInvoked := false
 	localCacheMock := mockLocalCache{}
 	localCacheMock.localDownloadDir = func() string { return "/fake" }
-	localCacheMock.isKubectlAvailable = func(f string) bool { return false }
+	localCacheMock.findCompatibleKubectlAlreadyDownloaded = func(v semver.Version) (semver.Version, error) {
+		return semver.Version{}, &NoVersionFoundError{}
+	}
+
 	localCacheMock.setupLocalDirs = func() error {
 		setupLocalDirsInvoked = true
 		return nil
@@ -211,7 +216,7 @@ func TestKubectlVersionToUseTimeoutAndCacheEmpty(t *testing.T) {
 
 	localCacheMock := mockLocalCache{}
 	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{}, nil
+		return semver.Versions{}, &NoVersionFoundError{}
 	}
 
 	downloadMock := mockDownloader{}
