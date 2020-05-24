@@ -47,10 +47,14 @@ func NewVersioner() *Versioner {
 // and acts accordingly.
 func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 	version, err := v.apiServer.Version()
-	if err != nil && isTimeout(err) {
-		// the remote server is unreachable, let's get
-		// the latest version of kubectl that is available on the system
-		klog.Info("Remote kubernetes server unreachable")
+	if err != nil {
+		if isTimeout(err) {
+			// the remote server is unreachable, let's get
+			// the latest version of kubectl that is available on the system
+			klog.Info("Remote kubernetes server unreachable")
+		} else {
+			klog.Info(err)
+		}
 		version, err = v.MostRecentKubectlDownloaded()
 		if err != nil && isNoVersionFound(err) {
 			klog.Info("No local kubectl binary found, fetching latest stable release version")
