@@ -14,9 +14,9 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-// KUBECTL_STABLE_URL URL of the text file used by kubernetes community
+// KubectlStableURL URL of the text file used by kubernetes community
 // to hold the latest stable version of kubernetes released
-const KUBECTL_STABLE_URL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
+const KubectlStableURL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
 
 // Downloder is an helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information
@@ -26,7 +26,7 @@ type Downloder struct {
 // UpstreamStableVersion returns the latest version of kubernetes that upstream
 // considers stable
 func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
-	res, err := http.Get(KUBECTL_STABLE_URL)
+	res, err := http.Get(KubectlStableURL)
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -34,7 +34,7 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 		return semver.Version{},
 			fmt.Errorf(
 				"GET %s returned http status %s",
-				KUBECTL_STABLE_URL,
+				KubectlStableURL,
 				res.Status,
 			)
 	}
@@ -51,12 +51,12 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 // GetKubectlBinary downloads the kubectl binary identified by the given version
 // to the specified destination
 func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
-	downloadUrl, err := d.kubectlDownloadURL(version)
+	downloadURL, err := d.kubectlDownloadURL(version)
 	if err != nil {
 		return err
 	}
 
-	return d.download(downloadUrl, destination, 0755)
+	return d.download(downloadURL, destination, 0755)
 }
 
 func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {

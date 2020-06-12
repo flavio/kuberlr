@@ -16,8 +16,8 @@ var (
 	ClosestTag string
 )
 
-// KuberlrVersion holds the build-time information of kuberlr
-type KuberlrVersion struct {
+// KVersion holds the build-time information of kuberlr
+type KVersion struct {
 	Version   string
 	BuildDate string
 	Tag       string
@@ -25,8 +25,8 @@ type KuberlrVersion struct {
 }
 
 // CurrentVersion returns the information about the current version of kuberlr
-func CurrentVersion() KuberlrVersion {
-	kuberlrVersion := KuberlrVersion{
+func CurrentVersion() KVersion {
+	kuberlrVersion := KVersion{
 		Version:   Version,
 		BuildDate: BuildDate,
 		Tag:       Tag,
@@ -39,7 +39,7 @@ func CurrentVersion() KuberlrVersion {
 }
 
 // String returns the version information nicely formatted
-func (s KuberlrVersion) String() string {
+func (s KVersion) String() string {
 	if s.Tag == "" {
 		return fmt.Sprintf("kuberlr version: %s %s %s", s.Version, s.BuildDate, s.GoVersion)
 	}

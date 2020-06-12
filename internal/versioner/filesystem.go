@@ -12,14 +12,14 @@ import (
 	"github.com/blang/semver"
 )
 
-// KUBECTL_LOCAL_NAMING_SCHEME holds the scheme used to name the kubectl binaries
+// KubectlLocalNamingScheme holds the scheme used to name the kubectl binaries
 // downloaded by kuberlr
-const KUBECTL_LOCAL_NAMING_SCHEME = "kubectl-%d.%d.%d"
+const KubectlLocalNamingScheme = "kubectl-%d.%d.%d"
 
 // BuildKubectNameFromVersion returns how kuberlr will name the kubectl binary
 // with the specified version
 func BuildKubectNameFromVersion(v semver.Version) string {
-	return fmt.Sprintf(KUBECTL_LOCAL_NAMING_SCHEME, v.Major, v.Minor, v.Patch)
+	return fmt.Sprintf(KubectlLocalNamingScheme, v.Major, v.Minor, v.Patch)
 }
 
 type localCacheHandler struct {
@@ -61,7 +61,7 @@ func (h *localCacheHandler) LocalKubectlVersions() (semver.Versions, error) {
 		var major, minor, patch uint64
 		n, err := fmt.Sscanf(
 			f.Name(),
-			KUBECTL_LOCAL_NAMING_SCHEME,
+			KubectlLocalNamingScheme,
 			&major,
 			&minor,
 			&patch)
@@ -102,7 +102,7 @@ func (h *localCacheHandler) FindCompatibleKubectlAlreadyDownloaded(requestedVers
 		return semver.Version{}, err
 	}
 
-	for i := len(versions) - 1; i >= 0; i -= 1 {
+	for i := len(versions) - 1; i >= 0; i-- {
 		if validRange(versions[i]) {
 			return versions[i], nil
 		}
