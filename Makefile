@@ -91,12 +91,12 @@ lint: deps
 	$(GO) vet ./...
 	# run go gmt
 	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
-	# run golangci-lint
-	$(BINPATH)/golangci-lint run --verbose --timeout=3m
+	# run golint
+	golint -set_exit_status cmd/... internal/... pkg/...
 
 .PHONY: deps
 deps:
-	test -f $(BINPATH)/golangci-lint || curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BINPATH) v1.21.0
+	go get -u golang.org/x/lint/golint
 
 .PHONY: pre-commit-install
 pre-commit-install:
