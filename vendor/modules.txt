@@ -21,8 +21,13 @@ github.com/googleapis/gnostic/extensions
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jedib0t/go-pretty/v6 v6.0.4
+github.com/jedib0t/go-pretty/v6/table
+github.com/jedib0t/go-pretty/v6/text
 # github.com/json-iterator/go v1.1.9
 github.com/json-iterator/go
+# github.com/mattn/go-runewidth v0.0.9
+github.com/mattn/go-runewidth
 # github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 github.com/mitchellh/colorstring
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
