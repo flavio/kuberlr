@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 	"testing"
 
@@ -13,45 +12,50 @@ import (
 )
 
 type localCacheTestData struct {
-	HomeEnv  string
-	RealHome string
-	TempHome string
+	HomeEnv        string
+	RealHome       string
+	TempHome       string
+	FakeSysBinPath string
+	localCache     localCacheHandler
 }
 
 func setupFilesystemTest() (localCacheTestData, error) {
 	homeEnv := common.HomeDirEnvKey()
 	realHome := common.HomeDir()
 
-	tempHome, err := ioutil.TempDir("", "kuberlr")
+	tempHome, err := ioutil.TempDir("", "kuberlr-fake-home")
 	if err != nil {
 		return localCacheTestData{}, err
 	}
 
 	os.Setenv(homeEnv, tempHome)
 
-	return localCacheTestData{
-		HomeEnv:  homeEnv,
-		RealHome: realHome,
-		TempHome: tempHome,
-	}, nil
+	fakeSysBin, err := ioutil.TempDir("", "kuberlr-fake-usr-bin")
+	if err != nil {
+		return localCacheTestData{}, err
+	}
+
+	td := localCacheTestData{
+		HomeEnv:        homeEnv,
+		RealHome:       realHome,
+		TempHome:       tempHome,
+		FakeSysBinPath: fakeSysBin,
+		localCache: localCacheHandler{
+			SysBinaryPath: fakeSysBin,
+		},
+	}
+	return td, nil
 }
 
 func teardownFilesystemTest(td localCacheTestData) error {
 	os.Setenv(td.HomeEnv, td.RealHome)
-	return os.RemoveAll(td.TempHome)
-}
+	err1 := os.RemoveAll(td.TempHome)
+	err2 := os.RemoveAll(td.FakeSysBinPath)
 
-func createFakeKubectBin(downloadDir string, version semver.Version) error {
-	dest := path.Join(
-		downloadDir,
-		BuildKubectNameFromVersion(version),
-	)
-
-	file, err := os.Create(dest)
-	if err != nil {
-		return err
+	if err1 != nil {
+		return err1
 	}
-	return file.Close()
+	return err2
 }
 
 func TestLocalDownloadDir(t *testing.T) {
@@ -65,15 +69,14 @@ func TestLocalDownloadDir(t *testing.T) {
 		}
 	}()
 
-	lc := localCacheHandler{}
-	actual := lc.LocalDownloadDir()
+	actual := td.localCache.LocalDownloadDir()
 
 	if !strings.HasPrefix(actual, td.TempHome) {
 		t.Errorf("Expected %s to beging with %s", actual, td.TempHome)
 	}
 }
 
-func TestLocalKubectlVersions(t *testing.T) {
+func TestAllKubectlBinaries(t *testing.T) {
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
@@ -84,37 +87,35 @@ func TestLocalKubectlVersions(t *testing.T) {
 		}
 	}()
 
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
-	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
+	localBins := fakeKubectlBinaries(
+		td.localCache.LocalDownloadDir(),
+		[]string{"1.4.2"},
+		&localKubectlNamer{})
+	if err := createFakeKubectlBinaries(localBins); err != nil {
+		t.Error(err)
 	}
 
-	expected := semver.Versions{
-		semver.MustParse("1.4.2"),
-		semver.MustParse("2.1.3"),
+	systemBins := fakeKubectlBinaries(
+		td.FakeSysBinPath,
+		[]string{"2.1.3"},
+		&systemKubectlNamer{})
+	if err := createFakeKubectlBinaries(systemBins); err != nil {
+		t.Error(err)
 	}
 
-	for _, v := range expected {
-		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
-			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
+	expected := append(systemBins, localBins...)
+	actual := td.localCache.AllKubectlBinaries(true)
+
+	if len(expected) != len(actual) {
+		t.Errorf("Expected %+v, got %+v instead", expected, actual)
+	}
+
+	for i, expectedBin := range expected {
+		if !actual[i].Version.Equals(expectedBin.Version) {
+			t.Errorf("Got %+v instead of %+v", actual[i].Version, expectedBin.Version)
 		}
-	}
-
-	actual, err := lc.LocalKubectlVersions()
-	if err != nil {
-		t.Errorf("Unexpected error: %+v", err)
-	}
-	if actual.Len() != expected.Len() {
-		t.Errorf("Got %d results instead of %d", actual.Len(), expected.Len())
-	}
-
-	semver.Sort(actual)
-	semver.Sort(expected)
-
-	for i, expectedV := range expected {
-		if !actual[i].Equals(expectedV) {
-			t.Errorf("Got %+v instead of %+v", actual[i], expectedV)
+		if actual[i].Path != expectedBin.Path {
+			t.Errorf("Got %+v instead of %+v", actual[i].Path, expectedBin.Path)
 		}
 	}
 }
@@ -130,13 +131,12 @@ func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
 		}
 	}()
 
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
+	err = td.localCache.SetupLocalDirs()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
 
-	_, err = lc.LocalKubectlVersions()
+	_, err = td.localCache.LocalKubectlBinaries()
 	if !isNoVersionFound(err) {
 		t.Errorf("Got wrong error type: %T, expected NoVersionFoundError", err)
 	}
@@ -153,18 +153,16 @@ func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
 		}
 	}()
 
-	lc := localCacheHandler{}
-
-	_, err = lc.LocalKubectlVersions()
+	_, err = td.localCache.LocalKubectlBinaries()
 	if !isNoVersionFound(err) {
 		t.Errorf("Got wrong error type: %T, expected NoVersionFoundError", err)
 	}
 }
 
-func TestFindCompatibleKubectlAlreadyDownloadedLowerBoundMatch(t *testing.T) {
+func findCompatibleKubectlTester(version string, localVersions, systemVersions []string, expected string) error {
 	td, err := setupFilesystemTest()
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
+		return err
 	}
 	defer func() {
 		if err := teardownFilesystemTest(td); err != nil {
@@ -172,139 +170,106 @@ func TestFindCompatibleKubectlAlreadyDownloadedLowerBoundMatch(t *testing.T) {
 		}
 	}()
 
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
+	localBins := fakeKubectlBinaries(
+		td.localCache.LocalDownloadDir(),
+		localVersions,
+		&localKubectlNamer{})
+	if err := createFakeKubectlBinaries(localBins); err != nil {
+		return err
+	}
+
+	systemBins := fakeKubectlBinaries(
+		td.FakeSysBinPath,
+		systemVersions,
+		&systemKubectlNamer{})
+	if err := createFakeKubectlBinaries(systemBins); err != nil {
+		return err
+	}
+
+	actual, err := td.localCache.FindCompatibleKubectl(semver.MustParse(version))
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
+		return err
+	}
+	expectedVersion := semver.MustParse(expected)
+	if !actual.Version.Equals(expectedVersion) {
+		return fmt.Errorf("Got %v instead of %v", actual.Version, expectedVersion)
 	}
 
-	versions := semver.Versions{
-		semver.MustParse("1.4.2"),
-		semver.MustParse("2.1.3"),
-	}
-	expected := versions[0]
+	return nil
+}
 
-	for _, v := range versions {
-		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
-			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
-		}
-	}
+func TestFindCompatibleKubectlLowerBoundMatchInsideLocalCache(t *testing.T) {
+	localVersions := []string{"1.4.2", "2.1.3"}
+	systemVersions := []string{"1.1.3"}
+	expectedVersion := "1.4.2"
 
-	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.5.13"))
+	err := findCompatibleKubectlTester("1.5.13", localVersions, systemVersions, expectedVersion)
 	if err != nil {
-		t.Errorf("Unexpected error: %+v", err)
-	}
-	if !actual.Equals(expected) {
-		t.Errorf("Got %v instead of %v", actual, expected)
+		t.Error(err)
 	}
 }
 
-func TestFindCompatibleKubectlAlreadyDownloadedUpperBoundMatch(t *testing.T) {
-	td, err := setupFilesystemTest()
+func TestFindCompatibleKubectlLowerBoundMatchInsideSystem(t *testing.T) {
+	localVersions := []string{"1.1.3"}
+	systemVersions := []string{"1.4.2", "2.1.3"}
+	expectedVersion := "1.4.0"
+
+	err := findCompatibleKubectlTester("1.5.13", localVersions, systemVersions, expectedVersion)
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
-	}
-	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
-		}
-	}()
-
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
-	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
-	}
-
-	versions := semver.Versions{
-		semver.MustParse("1.4.2"),
-		semver.MustParse("2.1.3"),
-	}
-	expected := versions[1]
-
-	for _, v := range versions {
-		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
-			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
-		}
-	}
-
-	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("2.1.0"))
-	if err != nil {
-		t.Errorf("Unexpected error: %+v", err)
-	}
-	if !actual.Equals(expected) {
-		t.Errorf("Got %v instead of %v", actual, expected)
+		t.Error(err)
 	}
 }
 
-func TestFindCompatibleKubectlAlreadyDownloadedMostRecentCompatibleVersion(t *testing.T) {
-	td, err := setupFilesystemTest()
+func TestFindCompatibleKubectlUpperBoundMatchInsideLocalCache(t *testing.T) {
+	localVersions := []string{"1.4.2", "2.1.3"}
+	systemVersions := []string{"1.1.3"}
+	expectedVersion := "2.1.3"
+
+	err := findCompatibleKubectlTester("2.1.0", localVersions, systemVersions, expectedVersion)
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
-	}
-	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
-		}
-	}()
-
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
-	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
-	}
-
-	versions := semver.Versions{
-		semver.MustParse("1.4.2"),
-		semver.MustParse("1.5.13"),
-		semver.MustParse("2.1.3"),
-	}
-	expected := versions[1]
-
-	for _, v := range versions {
-		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
-			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
-		}
-	}
-
-	actual, err := lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.4.0"))
-	if err != nil {
-		t.Errorf("Unexpected error: %+v", err)
-	}
-	if !actual.Equals(expected) {
-		t.Errorf("Got %v instead of %v", actual, expected)
+		t.Error(err)
 	}
 }
 
-func TestFindCompatibleKubectlAlreadyDownloadedNoMatchFound(t *testing.T) {
-	td, err := setupFilesystemTest()
+func TestFindCompatibleKubectlUpperBoundMatchInsideSystem(t *testing.T) {
+	localVersions := []string{"1.1.3"}
+	systemVersions := []string{"1.4.2", "2.1.3"}
+	expectedVersion := "2.1.0"
+
+	err := findCompatibleKubectlTester("2.1.0", localVersions, systemVersions, expectedVersion)
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
+		t.Error(err)
 	}
-	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
-		}
-	}()
+}
 
-	lc := localCacheHandler{}
-	err = lc.SetupLocalDirs()
+func TestFindCompatibleKubectlMostRecentCompatibleVersionInsideLocalCache(t *testing.T) {
+	localVersions := []string{"1.5.3"}
+	systemVersions := []string{"1.4.2", "2.1.3"}
+	expectedVersion := "1.5.3"
+
+	err := findCompatibleKubectlTester("1.4.0", localVersions, systemVersions, expectedVersion)
 	if err != nil {
-		t.Errorf("Unexpeted failure: %v", err)
+		t.Error(err)
 	}
+}
 
-	versions := semver.Versions{
-		semver.MustParse("1.4.2"),
-		semver.MustParse("2.1.3"),
+func TestFindCompatibleKubectlMostRecentCompatibleVersionInsideSystem(t *testing.T) {
+	localVersions := []string{"1.4.2", "2.1.3"}
+	systemVersions := []string{"1.5.3"}
+	expectedVersion := "1.5.0"
+
+	err := findCompatibleKubectlTester("1.4.0", localVersions, systemVersions, expectedVersion)
+	if err != nil {
+		t.Error(err)
 	}
+}
 
-	for _, v := range versions {
-		if err := createFakeKubectBin(lc.LocalDownloadDir(), v); err != nil {
-			t.Errorf("Unexpected error while creating fake kubectl binary: %+v", err)
-		}
-	}
+func TestFindCompatibleKubectlNoMatchFound(t *testing.T) {
+	localVersions := []string{}
+	systemVersions := []string{}
+	expectedVersion := "0.0.0"
 
-	_, err = lc.FindCompatibleKubectlAlreadyDownloaded(semver.MustParse("1.2.10"))
+	err := findCompatibleKubectlTester("1.4.0", localVersions, systemVersions, expectedVersion)
 	if !isNoVersionFound(err) {
 		t.Errorf("Expected error not found")
 	}

@@ -1,32 +1,47 @@
 package versioner
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/blang/semver"
 )
 
-type mockLocalCache struct {
-	localDownloadDir                       func() string
-	setupLocalDirs                         func() error
-	localKubectlVersions                   func() (semver.Versions, error)
-	findCompatibleKubectlAlreadyDownloaded func(requestedVersion semver.Version) (semver.Version, error)
+type mockSystem struct {
+	localDownloadDir      func() string
+	setupLocalDirs        func() error
+	localKubectlBinaries  func() (KubectlBinaries, error)
+	systemKubectlBinaries func() (KubectlBinaries, error)
+	findCompatibleKubectl func(requestedVersion semver.Version) (KubectlBinary, error)
 }
 
-func (m *mockLocalCache) LocalDownloadDir() string {
+func (m *mockSystem) LocalDownloadDir() string {
 	return m.localDownloadDir()
 }
 
-func (m *mockLocalCache) SetupLocalDirs() error {
+func (m *mockSystem) SetupLocalDirs() error {
 	return m.setupLocalDirs()
 }
 
-func (m *mockLocalCache) LocalKubectlVersions() (semver.Versions, error) {
-	return m.localKubectlVersions()
+func (m *mockSystem) LocalKubectlBinaries() (KubectlBinaries, error) {
+	return m.localKubectlBinaries()
 }
 
-func (m *mockLocalCache) FindCompatibleKubectlAlreadyDownloaded(requestedVersion semver.Version) (semver.Version, error) {
-	return m.findCompatibleKubectlAlreadyDownloaded(requestedVersion)
+func (m *mockSystem) SystemKubectlBinaries() (KubectlBinaries, error) {
+	return m.systemKubectlBinaries()
+}
+
+func (m *mockSystem) FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error) {
+	return m.findCompatibleKubectl(requestedVersion)
+}
+
+func (m *mockSystem) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
+	local, _ := m.localKubectlBinaries()
+	system, _ := m.systemKubectlBinaries()
+
+	all := append(local, system...)
+	SortByVersion(all, reverseSort)
+	return all
 }
 
 type mockDownloader struct {
@@ -62,43 +77,82 @@ func (e *mockTimeoutError) Timeout() bool {
 	return true
 }
 
-func TestMostRecentKubectlDownloadedPopulatedCache(t *testing.T) {
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{
-			semver.MustParse("1.2.0"),
-			semver.MustParse("1.2.3"),
-			semver.MustParse("1.9.0"),
-		}, nil
+func genericTestMostRecentKubectlAvailable(localBins, systemBins KubectlBinaries, expected KubectlBinary) error {
+	systemMock := mockSystem{}
+	systemMock.localKubectlBinaries = func() (KubectlBinaries, error) {
+		bins := localBins
+		return bins, nil
+	}
+	systemMock.systemKubectlBinaries = func() (KubectlBinaries, error) {
+		bins := systemBins
+		return bins, nil
 	}
 
 	versioner := Versioner{
-		cache: &localCacheMock,
+		cache: &systemMock,
 	}
 
-	expected := semver.MustParse("1.9.0")
-
-	actual, err := versioner.MostRecentKubectlDownloaded()
+	actual, err := versioner.MostRecentKubectlAvailable()
 	if err != nil {
-		t.Errorf("Unexpected error %+v", err)
+		return err
 	}
 
-	if !actual.Equals(expected) {
-		t.Errorf("Got %s instead of %s", actual, expected)
+	if !actual.Version.Equals(expected.Version) {
+		return fmt.Errorf("Got %s instead of %s", actual, expected)
+	}
+	if actual.Path != expected.Path {
+		return fmt.Errorf("Got %s instead of %s", actual, expected)
+	}
+
+	return nil
+}
+
+func TestMostRecentKubectlAvailableLocalCacheMoreFreshThanSystem(t *testing.T) {
+	localBins := fakeKubectlBinaries(
+		"/fake/home",
+		[]string{"1.2.0", "1.2.3", "1.9.0"},
+		&localKubectlNamer{})
+	systemBins := fakeKubectlBinaries(
+		"/usr/bin",
+		[]string{"1.4.0"},
+		&systemKubectlNamer{})
+	expected := localBins[2]
+
+	if err := genericTestMostRecentKubectlAvailable(localBins, systemBins, expected); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMostRecentKubectlAvailableLocalCacheOlderThanSystem(t *testing.T) {
+	localBins := fakeKubectlBinaries(
+		"/fake/home",
+		[]string{"1.2.0", "1.2.3"},
+		&localKubectlNamer{})
+	systemBins := fakeKubectlBinaries(
+		"/usr/bin",
+		[]string{"1.4.0"},
+		&systemKubectlNamer{})
+	expected := systemBins[0]
+
+	if err := genericTestMostRecentKubectlAvailable(localBins, systemBins, expected); err != nil {
+		t.Error(err)
 	}
 }
 
 func TestMostRecentKubectlDownloadedEmptyCache(t *testing.T) {
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{}, &NoVersionFoundError{}
+	systemMock := mockSystem{}
+	systemMock.localKubectlBinaries = func() (KubectlBinaries, error) {
+		return KubectlBinaries{}, &NoVersionFoundError{}
+	}
+	systemMock.systemKubectlBinaries = func() (KubectlBinaries, error) {
+		return KubectlBinaries{}, &NoVersionFoundError{}
 	}
 
 	versioner := Versioner{
-		cache: &localCacheMock,
+		cache: &systemMock,
 	}
 
-	_, err := versioner.MostRecentKubectlDownloaded()
+	_, err := versioner.MostRecentKubectlAvailable()
 	if err == nil {
 		t.Errorf("Missing error")
 	}
@@ -108,38 +162,42 @@ func TestMostRecentKubectlDownloadedEmptyCache(t *testing.T) {
 	}
 }
 
-func TestEnsureKubectlIsAvailableLocalBinaryFound(t *testing.T) {
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localDownloadDir = func() string { return "/fake" }
-	localCacheMock.findCompatibleKubectlAlreadyDownloaded = func(v semver.Version) (semver.Version, error) {
-		return semver.MustParse("1.9.0"), nil
+func TestEnsureCompatibleKubectlAvailableLocalBinaryFound(t *testing.T) {
+	expectedVersion := semver.MustParse("1.9.0")
+	expectedPath := "/tmp/kubectl-1.9.0"
+
+	systemMock := mockSystem{}
+	systemMock.localDownloadDir = func() string { return "/fake" }
+	systemMock.findCompatibleKubectl = func(v semver.Version) (KubectlBinary, error) {
+		return KubectlBinary{
+			Version: expectedVersion,
+			Path:    expectedPath,
+		}, nil
 	}
 
 	versioner := Versioner{
-		cache: &localCacheMock,
+		cache: &systemMock,
 	}
 
-	expected := semver.MustParse("1.9.0")
-
-	actual, err := versioner.EnsureKubectlIsAvailable(expected)
+	actual, err := versioner.EnsureCompatibleKubectlAvailable(expectedVersion)
 	if err != nil {
 		t.Errorf("Unexpected error %+v", err)
 	}
 
-	if actual != versioner.kubectlBinary(expected) {
-		t.Errorf("Got %s instead of %s", actual, expected)
+	if actual != expectedPath {
+		t.Errorf("Got %s instead of %s", actual, expectedPath)
 	}
 }
 
-func TestEnsureKubectlIsAvailableLocalBinaryNotFound(t *testing.T) {
+func TestEnsureCompatibleKubectlAvailableLocalBinaryNotFound(t *testing.T) {
 	setupLocalDirsInvoked := false
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localDownloadDir = func() string { return "/fake" }
-	localCacheMock.findCompatibleKubectlAlreadyDownloaded = func(v semver.Version) (semver.Version, error) {
-		return semver.Version{}, &NoVersionFoundError{}
+	systemMock := mockSystem{}
+	systemMock.localDownloadDir = func() string { return "/fake" }
+	systemMock.findCompatibleKubectl = func(v semver.Version) (KubectlBinary, error) {
+		return KubectlBinary{}, &NoVersionFoundError{}
 	}
 
-	localCacheMock.setupLocalDirs = func() error {
+	systemMock.setupLocalDirs = func() error {
 		setupLocalDirsInvoked = true
 		return nil
 	}
@@ -152,13 +210,13 @@ func TestEnsureKubectlIsAvailableLocalBinaryNotFound(t *testing.T) {
 	}
 
 	versioner := Versioner{
-		cache:      &localCacheMock,
+		cache:      &systemMock,
 		downloader: &downloaderMock,
 	}
 
 	expected := semver.MustParse("1.9.0")
 
-	actual, err := versioner.EnsureKubectlIsAvailable(expected)
+	actual, err := versioner.EnsureCompatibleKubectlAvailable(expected)
 	if err != nil {
 		t.Errorf("Unexpected error %+v", err)
 	}
@@ -176,66 +234,101 @@ func TestEnsureKubectlIsAvailableLocalBinaryNotFound(t *testing.T) {
 	}
 }
 
-func TestKubectlVersionToUseTimeoutButCacheAlreadyPopulated(t *testing.T) {
-	apiMock := mockAPIServer{}
-	apiMock.version = func() (semver.Version, error) {
-		return semver.Version{}, &mockTimeoutError{}
-	}
+func TestKubectlVersionToUseTimeoutButLocalKubectlAvailable(t *testing.T) {
+	localBins := fakeKubectlBinaries(
+		"/fake/home",
+		[]string{"1.2.0", "1.2.3", "1.9.0"},
+		&localKubectlNamer{})
+	systemBins := KubectlBinaries{}
+	expected := localBins[2]
 
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{
-			semver.MustParse("1.9.0"),
-		}, nil
-	}
-
-	versioner := Versioner{
-		cache:     &localCacheMock,
-		apiServer: &apiMock,
-	}
-
-	expected := semver.MustParse("1.9.0")
-
-	actual, err := versioner.KubectlVersionToUse()
+	err := genericTestKubectlVersionToUseTimeout(
+		localBins,
+		systemBins,
+		expected,
+		&mockDownloader{})
 	if err != nil {
-		t.Errorf("Unexpected error %+v", err)
-	}
-
-	if !actual.Equals(expected) {
-		t.Errorf("Got %s instead of %s", actual, expected)
+		t.Error(err)
 	}
 }
 
-func TestKubectlVersionToUseTimeoutAndCacheEmpty(t *testing.T) {
-	expected := semver.MustParse("1.9.0")
+func TestKubectlVersionToUseTimeoutButSystemKubectlAvailable(t *testing.T) {
+	systemBins := fakeKubectlBinaries(
+		"/usr/bin",
+		[]string{"1.2.0", "1.2.3", "1.9.0"},
+		&systemKubectlNamer{})
+	localBins := KubectlBinaries{}
+	expected := systemBins[2]
 
-	apiMock := mockAPIServer{}
-	apiMock.version = func() (semver.Version, error) {
-		return semver.Version{}, &mockTimeoutError{}
+	err := genericTestKubectlVersionToUseTimeout(
+		localBins,
+		systemBins,
+		expected,
+		&mockDownloader{})
+	if err != nil {
+		t.Error(err)
 	}
+}
 
-	localCacheMock := mockLocalCache{}
-	localCacheMock.localKubectlVersions = func() (semver.Versions, error) {
-		return semver.Versions{}, &NoVersionFoundError{}
+func TestKubectlVersionToUseTimeoutAndNoKubectlAvailable(t *testing.T) {
+	localBins := KubectlBinaries{}
+	systemBins := KubectlBinaries{}
+	expected := KubectlBinary{
+		Version: semver.MustParse("100.100.100"),
+		Path:    "fake",
 	}
 
 	downloadMock := mockDownloader{}
 	downloadMock.upstreamStableVersion = func() (semver.Version, error) {
-		return expected, nil
+		return expected.Version, nil
+	}
+
+	err := genericTestKubectlVersionToUseTimeout(
+		localBins,
+		systemBins,
+		expected,
+		&downloadMock)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries, expected KubectlBinary, downloader *mockDownloader) error {
+	apiMock := mockAPIServer{}
+	apiMock.version = func() (semver.Version, error) {
+		return semver.Version{}, &mockTimeoutError{}
+	}
+
+	systemMock := mockSystem{}
+	systemMock.localKubectlBinaries = func() (KubectlBinaries, error) {
+		err := &NoVersionFoundError{}
+		if len(localBins) > 0 {
+			err = nil
+		}
+		return localBins, err
+	}
+	systemMock.systemKubectlBinaries = func() (KubectlBinaries, error) {
+		err := &NoVersionFoundError{}
+		if len(systemBins) > 0 {
+			err = nil
+		}
+		return systemBins, err
 	}
 
 	versioner := Versioner{
-		cache:      &localCacheMock,
+		cache:      &systemMock,
 		apiServer:  &apiMock,
-		downloader: &downloadMock,
+		downloader: downloader,
 	}
 
 	actual, err := versioner.KubectlVersionToUse()
 	if err != nil {
-		t.Errorf("Unexpected error %+v", err)
+		return err
 	}
 
-	if !actual.Equals(expected) {
-		t.Errorf("Got %s instead of %s", actual, expected)
+	if !actual.Equals(expected.Version) {
+		return fmt.Errorf("Got %s instead of %s", actual, expected)
 	}
+
+	return nil
 }

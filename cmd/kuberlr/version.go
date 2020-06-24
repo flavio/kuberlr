@@ -8,7 +8,7 @@ import (
 	"github.com/flavio/kuberlr/pkg/kuberlr"
 )
 
-// NewVersionCmd creates a new `skuba version` cobra command
+// NewVersionCmd creates a new `kuberlr version` cobra command
 func NewVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",

@@ -13,8 +13,10 @@ import (
 type localCache interface {
 	LocalDownloadDir() string
 	SetupLocalDirs() error
-	LocalKubectlVersions() (semver.Versions, error)
-	FindCompatibleKubectlAlreadyDownloaded(requestedVersion semver.Version) (semver.Version, error)
+	LocalKubectlBinaries() (KubectlBinaries, error)
+	SystemKubectlBinaries() (KubectlBinaries, error)
+	AllKubectlBinaries(reverseSort bool) KubectlBinaries
+	FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error)
 }
 
 type downloadHelper interface {
@@ -36,7 +38,7 @@ type Versioner struct {
 // NewVersioner is an helper function that creates a new Versioner instance
 func NewVersioner() *Versioner {
 	return &Versioner{
-		cache:      &localCacheHandler{},
+		cache:      NewLocalCacheHandler(),
 		downloader: &downloader.Downloder{},
 		apiServer:  &kubehelper.KubeAPI{},
 	}
@@ -55,10 +57,12 @@ func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 		} else {
 			klog.Info(err)
 		}
-		version, err = v.MostRecentKubectlDownloaded()
-		if err != nil && isNoVersionFound(err) {
+		kubectl, err := v.MostRecentKubectlAvailable()
+		if err == nil {
+			return kubectl.Version, nil
+		} else if isNoVersionFound(err) {
 			klog.Info("No local kubectl binary found, fetching latest stable release version")
-			version, err = v.downloader.UpstreamStableVersion()
+			return v.downloader.UpstreamStableVersion()
 		}
 	}
 	return version, err
@@ -67,16 +71,16 @@ func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 func (v *Versioner) kubectlBinary(version semver.Version) string {
 	return filepath.Join(
 		v.cache.LocalDownloadDir(),
-		BuildKubectNameFromVersion(version))
+		buildKubectlNameForLocalBin(version))
 }
 
-// EnsureKubectlIsAvailable ensures the kubectl binary with the specified
+// EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
 // binary
-func (v *Versioner) EnsureKubectlIsAvailable(version semver.Version) (string, error) {
-	compatibleVersion, err := v.cache.FindCompatibleKubectlAlreadyDownloaded(version)
+func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version) (string, error) {
+	kubectl, err := v.cache.FindCompatibleKubectl(version)
 	if err == nil {
-		return v.kubectlBinary(compatibleVersion), nil
+		return kubectl.Path, nil
 	}
 
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())
@@ -94,15 +98,17 @@ func (v *Versioner) EnsureKubectlIsAvailable(version semver.Version) (string, er
 	return filename, nil
 }
 
-// MostRecentKubectlDownloaded returns the most recent version of
-// kubectl downloaded by kuberlr
-func (v *Versioner) MostRecentKubectlDownloaded() (semver.Version, error) {
-	versions, err := v.cache.LocalKubectlVersions()
-	if err != nil {
-		return semver.Version{}, err
+// MostRecentKubectlAvailable returns the most recent version of
+// kubectl available on the system. It could be something downloaded
+// by kuberlr or something already available on the system
+func (v *Versioner) MostRecentKubectlAvailable() (KubectlBinary, error) {
+	bins := v.cache.AllKubectlBinaries(true)
+
+	if len(bins) == 0 {
+		return KubectlBinary{}, &NoVersionFoundError{}
 	}
 
-	return versions[len(versions)-1], nil
+	return bins[0], nil
 }
 
 func isTimeout(err error) bool {

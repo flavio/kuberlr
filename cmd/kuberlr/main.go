@@ -51,7 +51,7 @@ func kubectlWrapperMode() {
 		klog.Fatal(err)
 	}
 
-	kubectlBin, err := versioner.EnsureKubectlIsAvailable(version)
+	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(version)
 	if err != nil {
 		klog.Fatal(err)
 	}

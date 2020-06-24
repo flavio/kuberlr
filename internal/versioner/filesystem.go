@@ -1,6 +1,7 @@
 package versioner
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -16,13 +17,30 @@ import (
 // downloaded by kuberlr
 const KubectlLocalNamingScheme = "kubectl-%d.%d.%d"
 
-// BuildKubectNameFromVersion returns how kuberlr will name the kubectl binary
-// with the specified version
-func BuildKubectNameFromVersion(v semver.Version) string {
+// KubectlSystemNamingScheme holds the scheme used to name the kubectl binaries
+// installed system-wide
+const KubectlSystemNamingScheme = "kubectl-%d.%d"
+
+// buildKubectlNameForLocalBin returns how kuberlr will name the kubectl binary
+// with the specified version when downloading that to the user home
+func buildKubectlNameForLocalBin(v semver.Version) string {
 	return fmt.Sprintf(KubectlLocalNamingScheme, v.Major, v.Minor, v.Patch)
 }
 
+// buildKubectlNameForLocalBin returns how kuberlr expects system-wide
+// kubectl binaries to be named
+func buildKubectlNameForSystemBin(version semver.Version) string {
+	return fmt.Sprintf(KubectlSystemNamingScheme, version.Major, version.Minor)
+}
+
 type localCacheHandler struct {
+	SysBinaryPath string
+}
+
+func NewLocalCacheHandler() *localCacheHandler {
+	return &localCacheHandler{
+		SysBinaryPath: "/usr/bin",
+	}
 }
 
 func (*localCacheHandler) LocalDownloadDir() string {
@@ -46,51 +64,111 @@ func (h *localCacheHandler) SetupLocalDirs() error {
 	return os.MkdirAll(h.LocalDownloadDir(), os.ModePerm)
 }
 
-func (h *localCacheHandler) LocalKubectlVersions() (semver.Versions, error) {
-	var versions semver.Versions
+func (h *localCacheHandler) SystemKubectlBinaries() (KubectlBinaries, error) {
+	return findKubectlBinaries(h.SysBinaryPath)
+}
 
-	kubectlBins, err := ioutil.ReadDir(h.LocalDownloadDir())
+func (h *localCacheHandler) LocalKubectlBinaries() (KubectlBinaries, error) {
+	return findKubectlBinaries(h.LocalDownloadDir())
+}
+
+func (h *localCacheHandler) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
+	var bins KubectlBinaries
+
+	localBin, err := h.LocalKubectlBinaries()
+	if err == nil {
+		bins = append(bins, localBin...)
+	}
+
+	systemBin, err := h.SystemKubectlBinaries()
+	if err == nil {
+		bins = append(bins, systemBin...)
+	}
+
+	SortByVersion(bins, reverseSort)
+
+	return bins
+}
+
+func inferLocalKubectlVersion(filename string) (semver.Version, error) {
+	var major, minor, patch uint64
+	n, err := fmt.Sscanf(
+		filename,
+		KubectlLocalNamingScheme,
+		&major,
+		&minor,
+		&patch)
+
+	if n == 3 && err == nil {
+		sv := semver.Version{
+			Major: major,
+			Minor: minor,
+			Patch: patch,
+		}
+		return sv, nil
+	}
+	return semver.Version{}, errors.New("Not parsable")
+}
+
+func inferSystemKubectlVersion(filename string) (semver.Version, error) {
+	var major, minor uint64
+	n, err := fmt.Sscanf(
+		filename,
+		KubectlSystemNamingScheme,
+		&major,
+		&minor)
+
+	if n == 2 && err == nil {
+		sv := semver.Version{
+			Major: major,
+			Minor: minor,
+			Patch: 0,
+		}
+		return sv, nil
+	}
+	return semver.Version{}, errors.New("Not parsable")
+}
+
+func findKubectlBinaries(path string) (KubectlBinaries, error) {
+	var binaries KubectlBinaries
+
+	kubectlBins, err := ioutil.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = &NoVersionFoundError{}
 		}
-		return versions, err
+		return binaries, err
 	}
 
 	for _, f := range kubectlBins {
-		var major, minor, patch uint64
-		n, err := fmt.Sscanf(
-			f.Name(),
-			KubectlLocalNamingScheme,
-			&major,
-			&minor,
-			&patch)
+		var sv semver.Version
+		var err error
 
-		if n == 3 && err == nil {
-			sv := semver.Version{
-				Major: major,
-				Minor: minor,
-				Patch: patch,
+		sv, err = inferLocalKubectlVersion(f.Name())
+		if err != nil {
+			sv, err = inferSystemKubectlVersion(f.Name())
+			if err != nil {
+				continue
 			}
-			versions = append(versions, sv)
 		}
-	}
-	semver.Sort(versions)
 
-	if versions.Len() == 0 {
-		return versions, &NoVersionFoundError{}
+		bin := KubectlBinary{
+			Path:    filepath.Join(path, f.Name()),
+			Version: sv,
+		}
+		binaries = append(binaries, bin)
 	}
-	return versions, nil
+
+	if len(binaries) == 0 {
+		return binaries, &NoVersionFoundError{}
+	}
+	return binaries, nil
 }
 
-func (h *localCacheHandler) FindCompatibleKubectlAlreadyDownloaded(requestedVersion semver.Version) (semver.Version, error) {
-	versions, err := h.LocalKubectlVersions()
-	if err != nil {
-		return semver.Version{}, err
-	}
-
-	if versions.Len() == 0 {
-		return semver.Version{}, &NoVersionFoundError{}
+func (h *localCacheHandler) FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error) {
+	bins := h.AllKubectlBinaries(true)
+	if len(bins) == 0 {
+		return KubectlBinary{}, &NoVersionFoundError{}
 	}
 
 	lowerBound := lowerBoundVersion(requestedVersion)
@@ -99,16 +177,16 @@ func (h *localCacheHandler) FindCompatibleKubectlAlreadyDownloaded(requestedVers
 
 	validRange, err := semver.ParseRange(rangeRule)
 	if err != nil {
-		return semver.Version{}, err
+		return KubectlBinary{}, err
 	}
 
-	for i := len(versions) - 1; i >= 0; i-- {
-		if validRange(versions[i]) {
-			return versions[i], nil
+	for _, b := range bins {
+		if validRange(b.Version) {
+			return b, nil
 		}
 	}
 
-	return semver.Version{}, &NoVersionFoundError{}
+	return KubectlBinary{}, &NoVersionFoundError{}
 }
 
 func lowerBoundVersion(v semver.Version) semver.Version {
