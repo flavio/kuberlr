@@ -37,6 +37,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		NewVersionCmd(),
+		NewBinsCmd(),
 	)
 
 	flags.RegisterVerboseFlag(cmd.PersistentFlags())
