@@ -8,10 +8,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	versioner "github.com/flavio/kuberlr/internal/versioner"
+	"github.com/flavio/kuberlr/internal/finder"
 )
 
-func printBinTable(bins versioner.KubectlBinaries) {
+func printBinTable(bins finder.KubectlBinaries) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"#", "Version", "Binary"})
@@ -27,9 +27,8 @@ func NewBinsCmd() *cobra.Command {
 		Use:   "bins",
 		Short: "Print information about the kubectl binaries found",
 		Run: func(cmd *cobra.Command, args []string) {
-			localCache := versioner.NewLocalCacheHandler()
-
-			systemBins, err := localCache.SystemKubectlBinaries()
+			kFinder := finder.NewKubectlFinder("", "")
+			systemBins, err := kFinder.SystemKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("system-wide kubectl binaries"))
 			if err != nil {
@@ -41,7 +40,7 @@ func NewBinsCmd() *cobra.Command {
 			}
 
 			fmt.Printf("\n\n")
-			localBins, err := localCache.LocalKubectlBinaries()
+			localBins, err := kFinder.LocalKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("local kubectl binaries"))
 			if err != nil {

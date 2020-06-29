@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
-	kubectl_versioner "github.com/flavio/kuberlr/internal/versioner"
+	"github.com/flavio/kuberlr/internal/finder"
 	"k8s.io/klog"
 )
 
@@ -46,7 +46,8 @@ func newRootCmd() *cobra.Command {
 }
 
 func kubectlWrapperMode() {
-	versioner := kubectl_versioner.NewVersioner()
+	kFinder := finder.NewKubectlFinder("", "")
+	versioner := finder.NewVersioner(kFinder)
 	version, err := versioner.KubectlVersionToUse()
 	if err != nil {
 		klog.Fatal(err)
