@@ -1,8 +1,10 @@
-package versioner
+package finder
 
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/flavio/kuberlr/internal/common"
 
 	"github.com/blang/semver"
 )
@@ -20,7 +22,7 @@ func (n *localKubectlNamer) ID() string {
 }
 
 func (n *localKubectlNamer) Compute(v semver.Version) string {
-	return buildKubectlNameForLocalBin(v)
+	return common.BuildKubectlNameForLocalBin(v)
 }
 
 type systemKubectlNamer struct {
@@ -31,8 +33,9 @@ func (n *systemKubectlNamer) ID() string {
 }
 
 func (n *systemKubectlNamer) Compute(v semver.Version) string {
-	return buildKubectlNameForSystemBin(v)
+	return common.BuildKubectlNameForSystemBin(v)
 }
+
 func fakeKubectlBinaries(path string, versions []string, nameBuilder kubectlNamer) KubectlBinaries {
 	bins := KubectlBinaries{}
 

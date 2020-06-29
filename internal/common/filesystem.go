@@ -1,7 +1,10 @@
 package common
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 )
 
 // HomeDirEnvKey returns the name of the environment variable
@@ -18,4 +21,14 @@ func HomeDirEnvKey() string {
 // HomeDir returns current user home directory
 func HomeDir() string {
 	return os.Getenv(HomeDirEnvKey())
+}
+
+func LocalDownloadDir() string {
+	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+
+	return filepath.Join(
+		HomeDir(),
+		".kuberlr",
+		platform,
+	)
 }

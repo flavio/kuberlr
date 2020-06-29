@@ -1,6 +1,6 @@
-package versioner
+package common
 
-type noVersionFound interface {
+type NoVersionFound interface {
 	NoVersionFound() bool
 }
 
@@ -18,4 +18,9 @@ func (e *NoVersionFoundError) Error() string {
 // NoVersionFound returns true if the error is a NoVersionFoundError instance
 func (e *NoVersionFoundError) NoVersionFound() bool {
 	return true
+}
+
+func IsNoVersionFound(err error) bool {
+	t, ok := err.(NoVersionFound)
+	return ok && t.NoVersionFound()
 }

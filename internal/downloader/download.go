@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"runtime"
 	"time"
 
@@ -54,6 +55,15 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	downloadURL, err := d.kubectlDownloadURL(version)
 	if err != nil {
 		return err
+	}
+
+	if _, err := os.Stat(path.Dir(destination)); err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(path.Dir(destination), os.ModePerm)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	return d.download(downloadURL, destination, 0755)

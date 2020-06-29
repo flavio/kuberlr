@@ -1,23 +1,15 @@
-package versioner
+package finder
 
 import (
 	"path/filepath"
 
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
 	"github.com/flavio/kuberlr/internal/kubehelper"
 
 	"github.com/blang/semver"
 	"k8s.io/klog"
 )
-
-type localCache interface {
-	LocalDownloadDir() string
-	SetupLocalDirs() error
-	LocalKubectlBinaries() (KubectlBinaries, error)
-	SystemKubectlBinaries() (KubectlBinaries, error)
-	AllKubectlBinaries(reverseSort bool) KubectlBinaries
-	FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error)
-}
 
 type downloadHelper interface {
 	GetKubectlBinary(version semver.Version, destination string) error
@@ -28,17 +20,25 @@ type kubeAPIHelper interface {
 	Version() (semver.Version, error)
 }
 
+type iFinder interface {
+	SystemKubectlBinaries() (KubectlBinaries, error)
+	LocalKubectlBinaries() (KubectlBinaries, error)
+	AllKubectlBinaries(reverseSort bool) KubectlBinaries
+	FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error)
+	MostRecentKubectlAvailable() (KubectlBinary, error)
+}
+
 // Versioner is used to manage the local kubectl binaries used by kuberlr
 type Versioner struct {
-	cache      localCache
+	kFinder    iFinder
 	downloader downloadHelper
 	apiServer  kubeAPIHelper
 }
 
 // NewVersioner is an helper function that creates a new Versioner instance
-func NewVersioner() *Versioner {
+func NewVersioner(f iFinder) *Versioner {
 	return &Versioner{
-		cache:      NewLocalCacheHandler(),
+		kFinder:    f,
 		downloader: &downloader.Downloder{},
 		apiServer:  &kubehelper.KubeAPI{},
 	}
@@ -57,10 +57,10 @@ func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 		} else {
 			klog.Info(err)
 		}
-		kubectl, err := v.MostRecentKubectlAvailable()
+		kubectl, err := v.kFinder.MostRecentKubectlAvailable()
 		if err == nil {
 			return kubectl.Version, nil
-		} else if isNoVersionFound(err) {
+		} else if common.IsNoVersionFound(err) {
 			klog.Info("No local kubectl binary found, fetching latest stable release version")
 			return v.downloader.UpstreamStableVersion()
 		}
@@ -68,17 +68,11 @@ func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 	return version, err
 }
 
-func (v *Versioner) kubectlBinary(version semver.Version) string {
-	return filepath.Join(
-		v.cache.LocalDownloadDir(),
-		buildKubectlNameForLocalBin(version))
-}
-
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
 // binary
 func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version) (string, error) {
-	kubectl, err := v.cache.FindCompatibleKubectl(version)
+	kubectl, err := v.kFinder.FindCompatibleKubectl(version)
 	if err == nil {
 		return kubectl.Path, nil
 	}
@@ -86,11 +80,10 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version) (st
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())
 
 	//download the right kubectl to the local cache
-	if err := v.cache.SetupLocalDirs(); err != nil {
-		return "", err
-	}
+	filename := filepath.Join(
+		common.LocalDownloadDir(),
+		common.BuildKubectlNameForLocalBin(version))
 
-	filename := v.kubectlBinary(version)
 	if err := v.downloader.GetKubectlBinary(version, filename); err != nil {
 		return "", err
 	}
@@ -98,27 +91,9 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version) (st
 	return filename, nil
 }
 
-// MostRecentKubectlAvailable returns the most recent version of
-// kubectl available on the system. It could be something downloaded
-// by kuberlr or something already available on the system
-func (v *Versioner) MostRecentKubectlAvailable() (KubectlBinary, error) {
-	bins := v.cache.AllKubectlBinaries(true)
-
-	if len(bins) == 0 {
-		return KubectlBinary{}, &NoVersionFoundError{}
-	}
-
-	return bins[0], nil
-}
-
 func isTimeout(err error) bool {
 	t, ok := err.(interface {
 		Timeout() bool
 	})
 	return ok && t.Timeout()
-}
-
-func isNoVersionFound(err error) bool {
-	t, ok := err.(noVersionFound)
-	return ok && t.NoVersionFound()
 }

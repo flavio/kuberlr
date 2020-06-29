@@ -1,4 +1,4 @@
-package versioner
+package finder
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ func TestSortAsc(t *testing.T) {
 	expected := KubectlBinaries{b1, b2, b3}
 	actual := KubectlBinaries{b3, b1, b2}
 
-	SortByVersion(actual, false)
+	SortKubectlByVersion(actual, false)
 
 	for i, e := range expected {
 		if actual[i].Path != e.Path {
@@ -53,7 +53,7 @@ func TestSortDesc(t *testing.T) {
 	expected := KubectlBinaries{b3, b2, b1}
 	actual := KubectlBinaries{b3, b1, b2}
 
-	SortByVersion(actual, true)
+	SortKubectlByVersion(actual, true)
 
 	for i, e := range expected {
 		if actual[i].Path != e.Path {

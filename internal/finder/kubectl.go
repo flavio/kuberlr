@@ -1,4 +1,4 @@
-package versioner
+package finder
 
 import (
 	"sort"
@@ -13,7 +13,7 @@ type KubectlBinary struct {
 
 type KubectlBinaries []KubectlBinary
 
-func SortByVersion(binaries KubectlBinaries, reverse bool) {
+func SortKubectlByVersion(binaries KubectlBinaries, reverse bool) {
 	sort.Slice(binaries, func(i, j int) bool {
 		if reverse {
 			return binaries[i].Version.GT(binaries[j].Version)
