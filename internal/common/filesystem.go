@@ -27,6 +27,8 @@ func HomeDir() string {
 	return os.Getenv(HomeDirEnvKey())
 }
 
+// LocalDownloadDir return the path to where kuberlr saves
+// the kubectl binaries downloaded from kubernetes' upstream mirror
 func LocalDownloadDir() string {
 	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
 

@@ -9,10 +9,14 @@ import (
 	"github.com/flavio/kuberlr/internal/common"
 )
 
+// Cfg is used to retrieve the configuration of kuberlr
 type Cfg struct {
 	Paths []string
 }
 
+// NewCfg returns a new Cfg object that is pre-configured
+// to look for the configuration files in the right set of
+// directories
 func NewCfg() *Cfg {
 	return &Cfg{
 		Paths: []string{
@@ -23,6 +27,7 @@ func NewCfg() *Cfg {
 	}
 }
 
+// Load reads the configuration files from disks and merges them
 func (c *Cfg) Load() (*viper.Viper, error) {
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)

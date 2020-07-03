@@ -20,7 +20,7 @@ func BuildKubectlNameForLocalBin(v semver.Version) string {
 	return fmt.Sprintf(KubectlLocalNamingScheme, v.Major, v.Minor, v.Patch)
 }
 
-// BuildKubectlNameForLocalBin returns how kuberlr expects system-wide
+// BuildKubectlNameForSystemBin returns how kuberlr expects system-wide
 // kubectl binaries to be named
 func BuildKubectlNameForSystemBin(version semver.Version) string {
 	return fmt.Sprintf(KubectlSystemNamingScheme, version.Major, version.Minor)

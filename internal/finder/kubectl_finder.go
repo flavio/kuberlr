@@ -12,11 +12,13 @@ import (
 	"github.com/blang/semver"
 )
 
+// KubectlFinder holds data about where to look the kubectl binaries
 type KubectlFinder struct {
 	LocalBinaryPath string
 	SysBinaryPath   string
 }
 
+// NewKubectlFinder returns a properly initialized KubectlFinder object
 func NewKubectlFinder(local, sys string) *KubectlFinder {
 	if local == "" {
 		local = common.LocalDownloadDir()
@@ -31,14 +33,20 @@ func NewKubectlFinder(local, sys string) *KubectlFinder {
 	}
 }
 
+// SystemKubectlBinaries returns the list of kubectl binaries that are
+// available to all the users of the system
 func (f *KubectlFinder) SystemKubectlBinaries() (KubectlBinaries, error) {
 	return findKubectlBinaries(f.SysBinaryPath)
 }
 
+// LocalKubectlBinaries returns the list of kubectl binaries that are
+// available only to the user currently running kuberlr
 func (f *KubectlFinder) LocalKubectlBinaries() (KubectlBinaries, error) {
 	return findKubectlBinaries(f.LocalBinaryPath)
 }
 
+// AllKubectlBinaries returns all the kubectl binaries available to the
+// user running kuberlr
 func (f *KubectlFinder) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
 	var bins KubectlBinaries
 
@@ -57,6 +65,8 @@ func (f *KubectlFinder) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
 	return bins
 }
 
+// FindCompatibleKubectl returns a kubectl binary compatible with the
+// version given via the `requestedVersion` parameter
 func (f *KubectlFinder) FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error) {
 	bins := f.AllKubectlBinaries(true)
 	if len(bins) == 0 {

@@ -1,6 +1,6 @@
 package common
 
-type NoVersionFound interface {
+type noVersionFound interface {
 	NoVersionFound() bool
 }
 
@@ -20,7 +20,9 @@ func (e *NoVersionFoundError) NoVersionFound() bool {
 	return true
 }
 
+// IsNoVersionFound returns true when the given error is of type
+// NoVersionFoundError
 func IsNoVersionFound(err error) bool {
-	t, ok := err.(NoVersionFound)
+	t, ok := err.(noVersionFound)
 	return ok && t.NoVersionFound()
 }
