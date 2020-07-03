@@ -57,11 +57,11 @@ func (m *mockDownloader) UpstreamStableVersion() (semver.Version, error) {
 }
 
 type mockAPIServer struct {
-	version func() (semver.Version, error)
+	version func(timeout int64) (semver.Version, error)
 }
 
-func (m *mockAPIServer) Version() (semver.Version, error) {
-	return m.version()
+func (m *mockAPIServer) Version(timeout int64) (semver.Version, error) {
+	return m.version(timeout)
 }
 
 type mockTimeoutError struct {
@@ -93,7 +93,7 @@ func TestEnsureCompatibleKubectlAvailableLocalBinaryFound(t *testing.T) {
 		kFinder: &finderMock,
 	}
 
-	actual, err := versioner.EnsureCompatibleKubectlAvailable(expectedVersion)
+	actual, err := versioner.EnsureCompatibleKubectlAvailable(expectedVersion, true)
 	if err != nil {
 		t.Errorf("Unexpected error %+v", err)
 	}
@@ -124,7 +124,7 @@ func TestEnsureCompatibleKubectlAvailableLocalBinaryNotFound(t *testing.T) {
 
 	expected := semver.MustParse("1.9.0")
 
-	actual, err := versioner.EnsureCompatibleKubectlAvailable(expected)
+	actual, err := versioner.EnsureCompatibleKubectlAvailable(expected, true)
 	if err != nil {
 		t.Errorf("Unexpected error %+v", err)
 	}
@@ -203,7 +203,7 @@ func TestKubectlVersionToUseTimeoutAndNoKubectlAvailable(t *testing.T) {
 // keep
 func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries, expected KubectlBinary, downloader *mockDownloader) error {
 	apiMock := mockAPIServer{}
-	apiMock.version = func() (semver.Version, error) {
+	apiMock.version = func(timeout int64) (semver.Version, error) {
 		return semver.Version{}, &mockTimeoutError{}
 	}
 
@@ -232,7 +232,7 @@ func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries
 		downloader: downloader,
 	}
 
-	actual, err := versioner.KubectlVersionToUse()
+	actual, err := versioner.KubectlVersionToUse(1)
 	if err != nil {
 		return err
 	}

@@ -7,10 +7,11 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"k8s.io/klog"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
+	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
-	"k8s.io/klog"
 )
 
 func main() {
@@ -46,14 +47,22 @@ func newRootCmd() *cobra.Command {
 }
 
 func kubectlWrapperMode() {
-	kFinder := finder.NewKubectlFinder("", "")
-	versioner := finder.NewVersioner(kFinder)
-	version, err := versioner.KubectlVersionToUse()
+	cfg := config.NewCfg()
+	v, err := cfg.Load()
 	if err != nil {
 		klog.Fatal(err)
 	}
 
-	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(version)
+	kFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
+	versioner := finder.NewVersioner(kFinder)
+	version, err := versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(
+		version,
+		v.GetBool("AllowDownload"))
 	if err != nil {
 		klog.Fatal(err)
 	}

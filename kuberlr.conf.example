@@ -1,0 +1,11 @@
+# Allow the download of missing kubectl binaries from kubernetes' upstream mirror
+# Default true
+AllowDownload = true
+
+# Directory where kubectl binaries are made accessible to all the users of the system
+# Default "/usr/bin"
+SystemPath = "/usr/bin"
+
+# Timeout (sec) for requests made against the kubernetes API
+# Default 5 seconds
+Timeout = 5

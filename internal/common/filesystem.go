@@ -7,6 +7,10 @@ import (
 	"runtime"
 )
 
+// SystemPath contains the default path to look for kubectl binaries
+// installed system-wide
+const SystemPath = "/usr/bin"
+
 // HomeDirEnvKey returns the name of the environment variable
 // that holds the name of the user home directory
 func HomeDirEnvKey() string {

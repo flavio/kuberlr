@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func createKubeClient() (*kubernetes.Clientset, error) {
+func createKubeClient(timeout int64) (*kubernetes.Clientset, error) {
 	var cliKubeconfig string
 	flag.StringVar(&cliKubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
 	flag.Parse()
@@ -40,7 +40,7 @@ func createKubeClient() (*kubernetes.Clientset, error) {
 	}
 
 	// lower the timeout value
-	restConfig.Timeout = 1 * time.Second
+	restConfig.Timeout = time.Duration(timeout) * time.Second
 
 	// create the clientset
 	return kubernetes.NewForConfig(restConfig)

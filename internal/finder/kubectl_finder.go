@@ -22,7 +22,7 @@ func NewKubectlFinder(local, sys string) *KubectlFinder {
 		local = common.LocalDownloadDir()
 	}
 	if sys == "" {
-		sys = "/usr/bin"
+		sys = common.SystemPath
 	}
 
 	return &KubectlFinder{

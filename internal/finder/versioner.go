@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"errors"
 	"path/filepath"
 
 	"github.com/flavio/kuberlr/internal/common"
@@ -17,7 +18,7 @@ type downloadHelper interface {
 }
 
 type kubeAPIHelper interface {
-	Version() (semver.Version, error)
+	Version(timeout int64) (semver.Version, error)
 }
 
 type iFinder interface {
@@ -47,8 +48,8 @@ func NewVersioner(f iFinder) *Versioner {
 // KubectlVersionToUse returns the kubectl version to be used to interact with
 // the remote server. The method takes into account different failure scenarios
 // and acts accordingly.
-func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
-	version, err := v.apiServer.Version()
+func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
+	version, err := v.apiServer.Version(timeout)
 	if err != nil {
 		if isTimeout(err) {
 			// the remote server is unreachable, let's get
@@ -71,10 +72,14 @@ func (v *Versioner) KubectlVersionToUse() (semver.Version, error) {
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
 // binary
-func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version) (string, error) {
+func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, allowDownload bool) (string, error) {
 	kubectl, err := v.kFinder.FindCompatibleKubectl(version)
 	if err == nil {
 		return kubectl.Path, nil
+	}
+
+	if !allowDownload {
+		return "", errors.New("The right kubectl is missing, binary downloads from kubernetes' upstream mirror are disabled")
 	}
 
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())

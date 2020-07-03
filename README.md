@@ -72,10 +72,14 @@ scheme: `kubectl<major version>.<minor version>.<patch level>`.
 Finally kuberlr performs an [execve(2)](https://www.unix.com/man-page/bsd/2/EXECVE/)
 syscall and leaves the control to the kubectl binary.
 
+**Note well:** by default kuberlr will download the missing `kubectl` binaries
+from the upstream mirror. This behaviour can be disabled via kuberlr's
+configuration file.
+
 ## Reusing system-wide kubectl binaries
 
 As pointed above kuberlr looks for a compatible kubectl binary both at user
-level (`~/.kuberlr/<GOOS>-<GOARCH>/`) and at system level (`/usr/sbin`).
+level (`~/.kuberlr/<GOOS>-<GOARCH>/`) and at system level (`/usr/bin`).
 
 The kubectl binaries installed at system level must respect one of these naming
 schemes in order to be used:
@@ -83,3 +87,32 @@ schemes in order to be used:
   * `kubectl<major version>.<minor version>.<patch level>` (e.g.: `kubectl1.18.3`)
   * `kubectl<major version>.<minor version>`: this would be handled as kubectl
     version `<major version>.<minor version>.0`
+
+## Configuration
+
+The behaviour of kuberlr can be adjusted by creating a configuration file in
+one of these locations:
+
+  1. `/usr/etc/kuberlr.conf`: this is the location used by distributions like
+    openSUSE to handle the split between `/etc` and `/usr/etc`. You can find
+    more details [here](https://en.opensuse.org/openSUSE:Packaging_UsrEtc).
+  1. `/etc/kuberlr.conf`
+  1. `$HOME/.kuberlr/kuberlr.conf`
+
+The configuration files are read in the order written above and merged together.
+Configuration files can override the values defined by the previous ones, or
+provide new ones.
+
+The configuration file is written using the [TOML format](https://github.com/toml-lang/toml):
+
+```toml
+# Allow the download of missing kubectl binaries from kubernetes' upstream mirror
+AllowDownload = true
+
+# Directory where kubectl binaries are made accessible to all the users of the system
+SystemPath = "/opt/bin"
+
+# Timeout (sec) for requests made against the kubernetes API
+Timeout = 1
+```
+
