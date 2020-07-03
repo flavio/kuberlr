@@ -8,11 +8,11 @@ import (
 
 // KubectlLocalNamingScheme holds the scheme used to name the kubectl binaries
 // downloaded by kuberlr
-const KubectlLocalNamingScheme = "kubectl-%d.%d.%d"
+const KubectlLocalNamingScheme = "kubectl%d.%d.%d"
 
 // KubectlSystemNamingScheme holds the scheme used to name the kubectl binaries
 // installed system-wide
-const KubectlSystemNamingScheme = "kubectl-%d.%d"
+const KubectlSystemNamingScheme = "kubectl%d.%d"
 
 // BuildKubectlNameForLocalBin returns how kuberlr will name the kubectl binary
 // with the specified version when downloading that to the user home

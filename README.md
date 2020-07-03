@@ -59,7 +59,7 @@ kuberlr obtains the url of the kubernetes cluster either by looking at the
 the `KUBECONFIG` environment variable.
 
 Once the version of the remote server is know, kuberlr looks for a compatible
-kubectl binary under the `~/.kuberlr/<GOOS>-<GOARCH>/` directory and `/usr/sbin`.
+kubectl binary under the `~/.kuberlr/<GOOS>-<GOARCH>/` directory and `/usr/bin`.
 
 kuberlr reuses an already existing binary if it respects the kubectl
 version skew policy, otherwise it downloads the right one from the
@@ -67,7 +67,7 @@ version skew policy, otherwise it downloads the right one from the
 the local user cache (`~/.kuberlr/<GOOS>-<GOARCH>/`).
 
 kuberlr names the kubectl binaries it downloads using the following naming
-scheme: `kubectl-<major version>.<minor version>.<patch level>`.
+scheme: `kubectl<major version>.<minor version>.<patch level>`.
 
 Finally kuberlr performs an [execve(2)](https://www.unix.com/man-page/bsd/2/EXECVE/)
 syscall and leaves the control to the kubectl binary.
@@ -80,6 +80,6 @@ level (`~/.kuberlr/<GOOS>-<GOARCH>/`) and at system level (`/usr/sbin`).
 The kubectl binaries installed at system level must respect one of these naming
 schemes in order to be used:
 
-  * `kubectl-<major version>.<minor version>.<patch level>`
-  * `kubectl-<major version>.<minor version>`: this would be handled as kubectl
-    version `-<major version>.<minor version>.0`
+  * `kubectl<major version>.<minor version>.<patch level>` (e.g.: `kubectl1.18.3`)
+  * `kubectl<major version>.<minor version>`: this would be handled as kubectl
+    version `<major version>.<minor version>.0`
