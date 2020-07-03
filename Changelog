@@ -1,0 +1,8 @@
+Fri Jul 03 21:39:02 CEST 2020  Flavio Castelli <flavio@castelli.me>
+
+	* Release v0.2.0
+	* Allow kubectl binaries available on the system to be reused
+	* Introduce configuration file:
+		- Allow the download behaviour to be turned off
+		- Allow customization of timeout when interacting with kubernetes' API
+			server
