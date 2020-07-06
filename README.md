@@ -49,6 +49,10 @@ $ ln -s ~/bin/kuberlr ~/bin/kubectl
 Use the `kubectl` *"fake binary"* as you usually do. Behind the scene
 kuberlr will ensure a compatible version of `kubectl` is used.
 
+You can invoke the `kuberlr` binary in a direct fashion to access its
+sub-commands. For example, the `kuberlr bins` will print all the `kubectl`
+binaries that are available to the user.
+
 ## How it works
 
 kuberlr connects to the API server of your kubernetes cluster and figures
