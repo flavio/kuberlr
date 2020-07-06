@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	"github.com/flavio/kuberlr/pkg/kuberlr"
 )
