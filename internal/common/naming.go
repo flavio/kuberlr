@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver"
 )
@@ -17,11 +18,11 @@ const KubectlSystemNamingScheme = "kubectl%d.%d"
 // BuildKubectlNameForLocalBin returns how kuberlr will name the kubectl binary
 // with the specified version when downloading that to the user home
 func BuildKubectlNameForLocalBin(v semver.Version) string {
-	return fmt.Sprintf(KubectlLocalNamingScheme, v.Major, v.Minor, v.Patch)
+	return fmt.Sprintf(KubectlLocalNamingScheme+osexec.Ext, v.Major, v.Minor, v.Patch)
 }
 
 // BuildKubectlNameForSystemBin returns how kuberlr expects system-wide
 // kubectl binaries to be named
 func BuildKubectlNameForSystemBin(version semver.Version) string {
-	return fmt.Sprintf(KubectlSystemNamingScheme, version.Major, version.Minor)
+	return fmt.Sprintf(KubectlSystemNamingScheme+osexec.Ext, version.Major, version.Minor)
 }

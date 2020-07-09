@@ -2,12 +2,13 @@ package downloader
 
 import (
 	"fmt"
+	"github.com/flavio/kuberlr/internal/osexec"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -72,12 +73,13 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
 	u, err := url.Parse(fmt.Sprintf(
-		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl",
+		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl%s",
 		v.Major,
 		v.Minor,
 		v.Patch,
 		runtime.GOOS,
 		runtime.GOARCH,
+		osexec.Ext,
 	))
 	if err != nil {
 		return "", err
