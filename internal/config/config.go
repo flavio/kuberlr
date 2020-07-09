@@ -19,11 +19,7 @@ type Cfg struct {
 // directories
 func NewCfg() *Cfg {
 	return &Cfg{
-		Paths: []string{
-			"/usr/etc/",
-			"/etc/",
-			filepath.Join(common.HomeDir(), ".kuberlr"),
-		},
+		Paths: configPaths,
 	}
 }
 
