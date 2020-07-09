@@ -7,10 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 )
-
-
 
 // Exec executes the program referred to by pathname with the given arguments and environment.
 // Windows doesn't support the unix-like `execve`, so we try to emulate it as best we can.

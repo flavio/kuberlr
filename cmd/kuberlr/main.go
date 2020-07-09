@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/flavio/kuberlr/internal/osexec"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 	"k8s.io/klog"
@@ -68,6 +68,6 @@ func kubectlWrapperMode() {
 	}
 
 	childArgs := append([]string{kubectlBin}, os.Args[1:]...)
-	err = syscall.Exec(kubectlBin, childArgs, os.Environ())
+	err = osexec.Exec(kubectlBin, childArgs, os.Environ())
 	klog.Fatal(err)
 }
