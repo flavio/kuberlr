@@ -11,6 +11,10 @@ builds:
     - -X=github.com/flavio/kuberlr/pkg/kuberlr.Version={{.Version}}
     - -X=github.com/flavio/kuberlr/pkg/kuberlr.BuildDate={{.Date}}
     - -X=github.com/flavio/kuberlr/pkg/kuberlr.Tag={{.Tag}}
+  goos:
+    - linux
+    - darwin
+    - windows
   goarch:
     - amd64
     - arm
