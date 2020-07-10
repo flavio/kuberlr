@@ -1,10 +1,15 @@
-name: tests
-
+name: unit tests
 on: [push, pull_request]
-
 jobs:
-  tests:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+        - os: macos-latest
+        - os: ubuntu-latest
+        - os: windows-latest
     steps:
       -
         name: Checkout
@@ -19,4 +24,4 @@ jobs:
         run: make lint
       -
         name: Execute unit tests
-        run: GO111MODULE=on go test -mod=vendor ./...
+        run: go test -mod=vendor ./...
