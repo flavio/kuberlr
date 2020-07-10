@@ -29,6 +29,8 @@ make it easy to manage clusters running different versions of kubernetes.
 This is how kuberlr looks like in action:
 [![asciicast](https://asciinema.org/a/326626.svg)](https://asciinema.org/a/326626)
 
+kuberlr can run on Linux, macOS and Windows.
+
 ## Installation
 
 You can find pre-built binaries of kuberlr under the
@@ -74,11 +76,14 @@ kuberlr names the kubectl binaries it downloads using the following naming
 scheme: `kubectl<major version>.<minor version>.<patch level>`.
 
 Finally kuberlr performs an [execve(2)](https://www.unix.com/man-page/bsd/2/EXECVE/)
-syscall and leaves the control to the kubectl binary.
+syscall and leaves the control to the kubectl binary. (٭)
 
 **Note well:** by default kuberlr will download the missing `kubectl` binaries
 from the upstream mirror. This behaviour can be disabled via kuberlr's
 configuration file.
+
+(٭) The `execve` syscall is not available on Windows. On this platform another
+approach is used, but the end result doesn't change.
 
 ## Reusing system-wide kubectl binaries
 
