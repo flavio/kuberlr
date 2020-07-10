@@ -1,13 +1,12 @@
 package main
 
 import (
+	"github.com/flavio/kuberlr/internal/osexec"
+	"github.com/spf13/cobra"
+	"k8s.io/klog"
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
-
-	"github.com/spf13/cobra"
-	"k8s.io/klog"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
 	"github.com/flavio/kuberlr/internal/config"
@@ -17,7 +16,8 @@ import (
 func main() {
 	klog.InitFlags(nil)
 
-	if strings.HasSuffix(os.Args[0], "kubectl") {
+	binary := osexec.TrimExt(filepath.Base(os.Args[0]))
+	if strings.HasSuffix(binary, "kubectl") {
 		kubectlWrapperMode()
 	}
 	nativeMode()
@@ -68,6 +68,6 @@ func kubectlWrapperMode() {
 	}
 
 	childArgs := append([]string{kubectlBin}, os.Args[1:]...)
-	err = syscall.Exec(kubectlBin, childArgs, os.Environ())
+	err = osexec.Exec(kubectlBin, childArgs, os.Environ())
 	klog.Fatal(err)
 }

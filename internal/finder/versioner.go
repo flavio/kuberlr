@@ -2,11 +2,10 @@ package finder
 
 import (
 	"errors"
-	"path/filepath"
-
 	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
 	"github.com/flavio/kuberlr/internal/kubehelper"
+	"path/filepath"
 
 	"github.com/blang/semver"
 	"k8s.io/klog"

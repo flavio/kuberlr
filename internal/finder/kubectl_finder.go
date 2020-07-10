@@ -3,6 +3,7 @@ package finder
 import (
 	"errors"
 	"fmt"
+	"github.com/flavio/kuberlr/internal/osexec"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -107,7 +108,7 @@ func (f *KubectlFinder) MostRecentKubectlAvailable() (KubectlBinary, error) {
 func inferLocalKubectlVersion(filename string) (semver.Version, error) {
 	var major, minor, patch uint64
 	n, err := fmt.Sscanf(
-		filename,
+		osexec.TrimExt(filename),
 		common.KubectlLocalNamingScheme,
 		&major,
 		&minor,
@@ -127,7 +128,7 @@ func inferLocalKubectlVersion(filename string) (semver.Version, error) {
 func inferSystemKubectlVersion(filename string) (semver.Version, error) {
 	var major, minor uint64
 	n, err := fmt.Sscanf(
-		filename,
+		osexec.TrimExt(filename),
 		common.KubectlSystemNamingScheme,
 		&major,
 		&minor)
