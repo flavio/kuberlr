@@ -67,7 +67,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 		}
 	}
 
-	return d.download(downloadURL, destination, 0755)
+	return d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, destination, 0755)
 }
 
 func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
@@ -88,7 +88,7 @@ func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 	return u.String(), nil
 }
 
-func (d *Downloder) download(urlToGet, destination string, mode os.FileMode) error {
+func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error {
 	req, err := http.NewRequest("GET", urlToGet, nil)
 	if err != nil {
 		return fmt.Errorf(
@@ -122,11 +122,13 @@ func (d *Downloder) download(urlToGet, destination string, mode os.FileMode) err
 
 	// write progress to stderr, writing to stdout would
 	// break bash/zsh/shell completion
+	fmt.Fprintf(os.Stderr, "Downloading %s\n", urlToGet)
 	bar := progressbar.NewOptions(
 		int(resp.ContentLength),
-		progressbar.OptionSetDescription(urlToGet),
+		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(40),
 		progressbar.OptionThrottle(10*time.Millisecond),
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
