@@ -1,6 +1,11 @@
+Mon Jul 27 17:43:08 CEST 2020  Flavio Castelli <flavio@castelli.me>
+
+	* Release v0.3.1
+	* Set progress bar desc to shorter string
+
 Fri Jul 10 17:02:20 CEST 2020  Flavio Castelli <flavio@castelli.me>
 
-	* Release v0.2.2
+	* Release v0.3.0
 	* Enable windows support
 
 Mon Jul 06 08:38:53 CEST 2020  Flavio Castelli <flavio@castelli.me>
