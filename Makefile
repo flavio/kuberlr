@@ -20,7 +20,12 @@ RM = rm
 BINPATH       := $(abspath ./bin)
 GOBINPATH     := $(shell $(GO) env GOPATH)/bin
 COMMIT        := $(shell git rev-parse HEAD)
-BUILD_DATE    := $(shell date +%Y%m%d)
+DATE_FMT = +%Y%m%d
+ifdef SOURCE_DATE_EPOCH
+    BUILD_DATE ?= $(shell date -u -d "@$(SOURCE_DATE_EPOCH)" $(DATE_FMT))
+else
+    BUILD_DATE ?= $(shell date $(DATE_FMT))
+endif
 # TAG can be provided as an envvar (provided in the .spec file)
 TAG           ?= $(shell git describe --tags --exact-match HEAD 2> /dev/null)
 # CLOSEST_TAG can be provided as an envvar (provided in the .spec file)
