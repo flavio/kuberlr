@@ -2,7 +2,7 @@ GOMOD ?= on
 GO ?= GO111MODULE=$(GOMOD) go
 
 #Don't enable mod=vendor when GOMOD is off or else go build/install will fail
-GOMODFLAG ?=-mod=vendor
+GOMODFLAG ?=
 ifeq ($(GOMOD), off)
 GOMODFLAG=
 endif
