@@ -120,6 +120,13 @@ func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 }
 
 func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error {
+	shaURLToGet := urlToGet + ".sha256"
+	shaExpected, err := d.getContentsOfURL(shaURLToGet)
+	if err != nil {
+		return fmt.Errorf("Error while trying to get contents of %s: %v", shaURLToGet, err)
+	}
+	shaExpected = strings.TrimRight(shaExpected, "\n")
+
 	req, err := http.NewRequest("GET", urlToGet, nil)
 	if err != nil {
 		return fmt.Errorf(
@@ -173,12 +180,6 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			urlToGet, temporaryDestinationFile.Name(), err)
 	}
 
-	shaURLToGet := urlToGet + ".sha256"
-	shaExpected, err := d.getContentsOfURL(shaURLToGet)
-	if err != nil {
-		return fmt.Errorf("Error while trying to get contents of %s: %v", shaURLToGet, err)
-	}
-	shaExpected = strings.TrimRight(shaExpected, "\n")
 	shaActual := hex.EncodeToString(hasher.Sum(nil))
 	if shaExpected != shaActual {
 		return &common.ShaMismatchError{urlToGet, shaExpected, shaActual}
