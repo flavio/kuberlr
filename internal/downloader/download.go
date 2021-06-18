@@ -182,7 +182,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 
 	shaActual := hex.EncodeToString(hasher.Sum(nil))
 	if shaExpected != shaActual {
-		return &common.ShaMismatchError{urlToGet, shaExpected, shaActual}
+		return &common.ShaMismatchError{Url: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
 
 	tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
