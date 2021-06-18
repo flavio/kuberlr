@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/osexec"
 	"io"
 	"io/ioutil"
@@ -64,8 +65,10 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 // to the specified destination
 func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
 	var firstErr error
+	const maxNumTries = 3
+	const timeToSleepOnRetryPerIter = 10 // seconds
 
-	for iter := 0; iter < 3; iter++ {
+	for iter := 1; iter <= maxNumTries; iter++ {
 		downloadURL, err := d.kubectlDownloadURL(version)
 		if err != nil {
 			return err
@@ -87,10 +90,10 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 		if iter == 0 {
 			firstErr = err
 		}
-		if strings.Contains(err.Error(), "Expected SHA") && version.Patch >= 0 {
+		if common.IsShaMismatch(err)  {
 			// Try downloading an older subversion
-			fmt.Fprintf(os.Stderr, "Trying to download %s failed integrity test (%v), retrying...\n", downloadURL, err)
-			time.Sleep(time.Duration((iter + 1) * 10) * time.Second)
+			fmt.Fprintf(os.Stderr, "Error on download attempt #%d: %s\n", iter, err)
+			time.Sleep(time.Duration(iter * timeToSleepOnRetryPerIter) * time.Second)
 		} else {
 			break
 		}
@@ -185,8 +188,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	shaExpected = strings.TrimRight(shaExpected, "\n")
 	shaActual := hex.EncodeToString(hasher.Sum(nil))
 	if shaExpected != shaActual {
-		return fmt.Errorf("Error downloading URL %s: Expected SHA [%s], got SHA [%s]",
-			urlToGet, shaExpected, shaActual)
+		return &common.ShaMismatchError{urlToGet, shaExpected, shaActual}
 	}
 
 	tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
