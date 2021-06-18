@@ -146,13 +146,6 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	if err != nil {
 		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
 	}
-
-	f, err := os.OpenFile(temporaryDestinationFile.Name(), os.O_CREATE|os.O_WRONLY, mode)
-	if err != nil {
-		return fmt.Errorf(
-			"Error while downloading %s to %s: %v",
-			urlToGet, temporaryDestinationFile.Name(), err)
-	}
 	defer temporaryDestinationFile.Close()
 	defer os.Remove(temporaryDestinationFile.Name())
 
@@ -173,7 +166,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	)
 	hasher := sha256.New()
 
-	_, err = io.Copy(io.MultiWriter(f, bar, hasher), resp.Body)
+	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
 	if err != nil {
 		return fmt.Errorf(
 			"Error while downloading text of %s into file %s: %v",
