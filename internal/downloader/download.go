@@ -185,10 +185,20 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 		return &common.ShaMismatchError{Url: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
 
-	tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
+	err = os.Rename(temporaryDestinationFile.Name(), destination)
 	if err != nil {
-		return fmt.Errorf("Error reading temporary file %s: %v",
-			temporaryDestinationFile.Name(), err)
+		linkErr, ok := err.(*os.LinkError)
+		if ok {
+			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
+			tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
+			if err != nil {
+				return fmt.Errorf("Error reading temporary file %s: %v",
+					temporaryDestinationFile.Name(), err)
+			}
+			err = ioutil.WriteFile(destination, tempInput, mode)
+		}
+	} else {
+		err = os.Chmod(destination, mode)
 	}
-	return ioutil.WriteFile(destination, tempInput, mode)
+	return err
 }
