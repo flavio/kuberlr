@@ -90,10 +90,10 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 		if iter == 0 {
 			firstErr = err
 		}
-		if common.IsShaMismatch(err)  {
+		if common.IsShaMismatch(err) {
 			// Try downloading an older subversion
 			fmt.Fprintf(os.Stderr, "Error on download attempt #%d: %s\n", iter, err)
-			time.Sleep(time.Duration(iter * timeToSleepOnRetryPerIter) * time.Second)
+			time.Sleep(time.Duration(iter*timeToSleepOnRetryPerIter) * time.Second)
 		} else {
 			break
 		}
@@ -149,7 +149,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			resp.Status,
 		)
 	}
-	temporaryDestinationFile, err := ioutil.TempFile(os.TempDir(), "kuberlr-kubectl-");
+	temporaryDestinationFile, err := ioutil.TempFile(os.TempDir(), "kuberlr-kubectl-")
 	if err != nil {
 		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
 	}
@@ -182,7 +182,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 
 	shaActual := hex.EncodeToString(hasher.Sum(nil))
 	if shaExpected != shaActual {
-		return &common.ShaMismatchError{Url: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
+		return &common.ShaMismatchError{URL: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
 
 	err = os.Rename(temporaryDestinationFile.Name(), destination)

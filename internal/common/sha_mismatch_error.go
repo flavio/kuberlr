@@ -9,14 +9,14 @@ type shaMismatch interface {
 // ShaMismatchError error is raised when the downloaded kubectl's SHA
 // doesn't match the recorded SHA
 type ShaMismatchError struct {
-	Url         string
+	URL         string
 	ShaExpected string
 	ShaActual   string
 }
 
 // Error returns a human description of the error
 func (e *ShaMismatchError) Error() string {
-	return fmt.Sprintf("SHA mismatch for URL %s: expected '%s', got '%s'", e.Url, e.ShaExpected, e.ShaActual)
+	return fmt.Sprintf("SHA mismatch for URL %s: expected '%s', got '%s'", e.URL, e.ShaExpected, e.ShaActual)
 }
 
 // ShaMismatch returns true if the error is a ShaMismatchError instance
