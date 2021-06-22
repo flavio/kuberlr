@@ -1,7 +1,10 @@
 package downloader
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/osexec"
 	"io"
 	"io/ioutil"
@@ -10,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/blang/semver"
@@ -20,23 +24,21 @@ import (
 // to hold the latest stable version of kubernetes released
 const KubectlStableURL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
 
-// Downloder is an helper class that is used to interact with the
+// Downloder is a helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information
 type Downloder struct {
 }
 
-// UpstreamStableVersion returns the latest version of kubernetes that upstream
-// considers stable
-func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
-	res, err := http.Get(KubectlStableURL)
+func (d *Downloder) getContentsOfURL(url string) (string, error) {
+	res, err := http.Get(url)
 	if err != nil {
-		return semver.Version{}, err
+		return "", err
 	}
 	if res.StatusCode != http.StatusOK {
-		return semver.Version{},
+		return "",
 			fmt.Errorf(
 				"GET %s returned http status %s",
-				KubectlStableURL,
+				url,
 				res.Status,
 			)
 	}
@@ -44,30 +46,59 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 	v, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
+		return "", err
+	}
+	return string(v), nil
+}
+
+// UpstreamStableVersion returns the latest version of kubernetes that upstream
+// considers stable
+func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
+	v, err := d.getContentsOfURL(KubectlStableURL)
+	if err != nil {
 		return semver.Version{}, err
 	}
-
-	return semver.ParseTolerant(string(v))
+	return semver.ParseTolerant(v)
 }
 
 // GetKubectlBinary downloads the kubectl binary identified by the given version
 // to the specified destination
 func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
-	downloadURL, err := d.kubectlDownloadURL(version)
-	if err != nil {
-		return err
-	}
+	var firstErr error
+	const maxNumTries = 3
+	const timeToSleepOnRetryPerIter = 10 // seconds
 
-	if _, err := os.Stat(filepath.Dir(destination)); err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
-		}
+	for iter := 1; iter <= maxNumTries; iter++ {
+		downloadURL, err := d.kubectlDownloadURL(version)
 		if err != nil {
 			return err
 		}
-	}
 
-	return d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, destination, 0755)
+		if _, err := os.Stat(filepath.Dir(destination)); err != nil {
+			if os.IsNotExist(err) {
+				err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
+			}
+			if err != nil {
+				return err
+			}
+		}
+
+		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, destination, 0755)
+		if err == nil {
+			return nil
+		}
+		if iter == 0 {
+			firstErr = err
+		}
+		if common.IsShaMismatch(err) {
+			// Try downloading an older subversion
+			fmt.Fprintf(os.Stderr, "Error on download attempt #%d: %s\n", iter, err)
+			time.Sleep(time.Duration(iter*timeToSleepOnRetryPerIter) * time.Second)
+		} else {
+			break
+		}
+	}
+	return firstErr
 }
 
 func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
@@ -89,6 +120,13 @@ func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 }
 
 func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error {
+	shaURLToGet := urlToGet + ".sha256"
+	shaExpected, err := d.getContentsOfURL(shaURLToGet)
+	if err != nil {
+		return fmt.Errorf("Error while trying to get contents of %s: %v", shaURLToGet, err)
+	}
+	shaExpected = strings.TrimRight(shaExpected, "\n")
+
 	req, err := http.NewRequest("GET", urlToGet, nil)
 	if err != nil {
 		return fmt.Errorf(
@@ -111,14 +149,12 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			resp.Status,
 		)
 	}
-
-	f, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY, mode)
+	temporaryDestinationFile, err := ioutil.TempFile(os.TempDir(), "kuberlr-kubectl-")
 	if err != nil {
-		return fmt.Errorf(
-			"Error while downloading %s to %s: %v",
-			urlToGet, destination, err)
+		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
 	}
-	defer f.Close()
+	defer temporaryDestinationFile.Close()
+	defer os.Remove(temporaryDestinationFile.Name())
 
 	// write progress to stderr, writing to stdout would
 	// break bash/zsh/shell completion
@@ -135,7 +171,34 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			fmt.Fprintln(os.Stderr, " done.")
 		}),
 	)
+	hasher := sha256.New()
 
-	_, err = io.Copy(io.MultiWriter(f, bar), resp.Body)
+	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
+	if err != nil {
+		return fmt.Errorf(
+			"Error while downloading text of %s into file %s: %v",
+			urlToGet, temporaryDestinationFile.Name(), err)
+	}
+
+	shaActual := hex.EncodeToString(hasher.Sum(nil))
+	if shaExpected != shaActual {
+		return &common.ShaMismatchError{URL: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
+	}
+
+	err = os.Rename(temporaryDestinationFile.Name(), destination)
+	if err != nil {
+		linkErr, ok := err.(*os.LinkError)
+		if ok {
+			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
+			tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
+			if err != nil {
+				return fmt.Errorf("Error reading temporary file %s: %v",
+					temporaryDestinationFile.Name(), err)
+			}
+			err = ioutil.WriteFile(destination, tempInput, mode)
+		}
+	} else {
+		err = os.Chmod(destination, mode)
+	}
 	return err
 }
