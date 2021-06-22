@@ -1,3 +1,9 @@
+Tue Jun 22 10:59:56 CEST 2021  Flavio Castelli <flavio@castelli.me>
+
+	* Release v0.3.2
+	* Make download more resilient: verify the shasum of the downloaded
+		binary.
+
 Mon Jul 27 17:43:08 CEST 2020  Flavio Castelli <flavio@castelli.me>
 
 	* Release v0.3.1
