@@ -1,7 +1,8 @@
 package kubehelper
 
 import (
-	"flag"
+	"os"
+	"strings"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -11,8 +12,21 @@ import (
 
 func createKubeClient(timeout int64) (*kubernetes.Clientset, error) {
 	var cliKubeconfig string
-	flag.StringVar(&cliKubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
-	flag.Parse()
+	for i := 1; i < len(os.Args); i++ {
+		if i+1 < len(os.Args) && os.Args[i] == "--kubeconfig" {
+			cliKubeconfig = os.Args[i+1]
+			// don't break here; in case there are multiple --kubeconfig options,
+			// the last one takes precedence
+			continue
+		}
+		if strings.HasPrefix(os.Args[i], "--kubeconfig=") {
+			cliKubeconfig = strings.TrimPrefix(os.Args[i], "--kubeconfig=")
+			continue
+		}
+		if os.Args[i] == "--" {
+			break
+		}
+	}
 
 	var restConfig *restclient.Config
 	var err error
