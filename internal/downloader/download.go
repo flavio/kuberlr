@@ -87,7 +87,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 		if err == nil {
 			return nil
 		}
-		if iter == 0 {
+		if iter == 1 {
 			firstErr = err
 		}
 		if common.IsShaMismatch(err) {
