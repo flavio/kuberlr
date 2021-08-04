@@ -1,3 +1,11 @@
+Wed Aug 04 10:55:25 CEST 2021  Flavio Castelli <flavio@castelli.me>
+
+	* Release v0.4.0
+	* Add `get` sub-command: this allows users to download a specific
+		version of `kubectl`
+	* Fix parsing of global options of kubectl
+	* Fix error reporting of the download helper
+
 Tue Jun 22 10:59:56 CEST 2021  Flavio Castelli <flavio@castelli.me>
 
 	* Release v0.3.2
