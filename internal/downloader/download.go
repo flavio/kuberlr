@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/schollz/progressbar/v3"
 )
 

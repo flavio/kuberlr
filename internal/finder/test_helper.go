@@ -6,7 +6,7 @@ import (
 
 	"github.com/flavio/kuberlr/internal/common"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 type kubectlNamer interface {

@@ -3,7 +3,7 @@ package finder
 import (
 	"sort"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 // KubectlBinary describes a kubectl binary

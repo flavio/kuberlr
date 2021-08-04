@@ -10,7 +10,7 @@ import (
 
 	"github.com/flavio/kuberlr/internal/common"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 // KubectlFinder holds data about where to look the kubectl binaries

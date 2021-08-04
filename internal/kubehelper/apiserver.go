@@ -1,7 +1,7 @@
 package kubehelper
 
 import (
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 // KubeAPI helps interactions with kubernetes API server

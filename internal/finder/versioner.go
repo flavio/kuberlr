@@ -7,7 +7,7 @@ import (
 	"github.com/flavio/kuberlr/internal/kubehelper"
 	"path/filepath"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"k8s.io/klog"
 )
 
