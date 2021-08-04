@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/flavio/kuberlr/internal/osexec"
-	"github.com/spf13/cobra"
-	"k8s.io/klog"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/flavio/kuberlr/internal/osexec"
+	"github.com/spf13/cobra"
+	"k8s.io/klog"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
 	"github.com/flavio/kuberlr/internal/config"
@@ -39,6 +40,7 @@ func newRootCmd() *cobra.Command {
 	cmd.AddCommand(
 		NewVersionCmd(),
 		NewBinsCmd(),
+		NewGetCmd(),
 	)
 
 	flags.RegisterVerboseFlag(cmd.PersistentFlags())
