@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/flavio/kuberlr/internal/common"
-	"github.com/flavio/kuberlr/internal/osexec"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +13,9 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/flavio/kuberlr/internal/common"
+	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver/v4"
 	"github.com/schollz/progressbar/v3"
@@ -153,8 +154,9 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	if err != nil {
 		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
 	}
-	defer temporaryDestinationFile.Close()
-	defer os.Remove(temporaryDestinationFile.Name())
+
+	tmpname := temporaryDestinationFile.Name()
+	defer os.Remove(tmpname)
 
 	// write progress to stderr, writing to stdout would
 	// break bash/zsh/shell completion
@@ -175,25 +177,30 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 
 	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
 	if err != nil {
+		temporaryDestinationFile.Close()
 		return fmt.Errorf(
 			"Error while downloading text of %s into file %s: %v",
-			urlToGet, temporaryDestinationFile.Name(), err)
+			urlToGet, tmpname, err)
 	}
+
+	// Closing the file handler prior to performing a rename so this process (the
+	// open file handler) does not conflict with the rename.
+	temporaryDestinationFile.Close()
 
 	shaActual := hex.EncodeToString(hasher.Sum(nil))
 	if shaExpected != shaActual {
 		return &common.ShaMismatchError{URL: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
 
-	err = os.Rename(temporaryDestinationFile.Name(), destination)
+	err = os.Rename(tmpname, destination)
 	if err != nil {
 		linkErr, ok := err.(*os.LinkError)
 		if ok {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
-			tempInput, err := ioutil.ReadFile(temporaryDestinationFile.Name())
+			tempInput, err := ioutil.ReadFile(tmpname)
 			if err != nil {
 				return fmt.Errorf("Error reading temporary file %s: %v",
-					temporaryDestinationFile.Name(), err)
+					tmpname, err)
 			}
 			err = ioutil.WriteFile(destination, tempInput, mode)
 		}
