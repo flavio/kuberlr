@@ -197,7 +197,8 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 		linkErr, ok := err.(*os.LinkError)
 		if ok {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
-			tempInput, err := ioutil.ReadFile(tmpname)
+			var tempInput []byte
+			tempInput, err = ioutil.ReadFile(tmpname)
 			if err != nil {
 				return fmt.Errorf("Error reading temporary file %s: %v",
 					tmpname, err)
