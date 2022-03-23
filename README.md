@@ -82,8 +82,8 @@ syscall and leaves the control to the kubectl binary. (٭)
 from the upstream mirror. This behaviour can be disabled via kuberlr's
 configuration file.
 
-(٭) The `execve` syscall is not available on Windows. On this platform another
-approach is used, but the end result doesn't change.
+The `execve` syscall is not available on Windows. On this platform another
+approach is used, but the end result doesn't change. (٭)
 
 ## Reusing system-wide kubectl binaries
 
