@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 func main() {
 	klog.InitFlags(nil)
+	flag.Parse()
 
 	binary := osexec.TrimExt(filepath.Base(os.Args[0]))
 	if strings.HasSuffix(binary, "kubectl") {
