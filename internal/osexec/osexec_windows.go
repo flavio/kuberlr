@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package osexec
@@ -37,7 +38,7 @@ func Exec(pathname string, argv []string, env []string) error {
 	cmd.Stdin = os.Stdin
 
 	// forward signals to child
-	sigCh := make(chan os.Signal)
+	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh)
 	defer func() {
 		signal.Stop(sigCh)

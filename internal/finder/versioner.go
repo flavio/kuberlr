@@ -2,10 +2,13 @@ package finder
 
 import (
 	"errors"
+	"net/url"
+	"os"
+	"path/filepath"
+
 	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
 	"github.com/flavio/kuberlr/internal/kubehelper"
-	"path/filepath"
 
 	"github.com/blang/semver/v4"
 	"k8s.io/klog"
@@ -50,18 +53,18 @@ func NewVersioner(f iFinder) *Versioner {
 func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 	version, err := v.apiServer.Version(timeout)
 	if err != nil {
-		if isTimeout(err) {
+		if isUnreachable(err) {
 			// the remote server is unreachable, let's get
 			// the latest version of kubectl that is available on the system
-			klog.Info("Remote kubernetes server unreachable")
+			klog.V(2).Info("Remote kubernetes server unreachable")
 		} else {
-			klog.Info(err)
+			klog.V(1).Info(err)
 		}
 		kubectl, err := v.kFinder.MostRecentKubectlAvailable()
 		if err == nil {
 			return kubectl.Version, nil
 		} else if common.IsNoVersionFound(err) {
-			klog.Info("No local kubectl binary found, fetching latest stable release version")
+			klog.V(2).Info("No local kubectl binary found, fetching latest stable release version")
 			return v.downloader.UpstreamStableVersion()
 		}
 	}
@@ -83,7 +86,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())
 
-	//download the right kubectl to the local cache
+	// download the right kubectl to the local cache
 	filename := filepath.Join(
 		common.LocalDownloadDir(),
 		common.BuildKubectlNameForLocalBin(version))
@@ -95,9 +98,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 	return filename, nil
 }
 
-func isTimeout(err error) bool {
-	t, ok := err.(interface {
-		Timeout() bool
-	})
-	return ok && t.Timeout()
+func isUnreachable(err error) bool {
+	var e *url.Error
+	return os.IsTimeout(err) || errors.As(err, &e)
 }
