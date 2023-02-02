@@ -19,6 +19,8 @@ builds:
     - amd64
     - arm
     - arm64
+universal_binaries:
+  - replace: false
 archives:
 - format_overrides:
   - goos: windows
