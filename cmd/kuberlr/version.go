@@ -15,6 +15,7 @@ func NewVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print version information",
 		Run: func(cmd *cobra.Command, args []string) {
+			//nolint: forbidigo
 			fmt.Printf("%s\n", kuberlr.CurrentVersion().String())
 		},
 	}

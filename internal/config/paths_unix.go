@@ -4,8 +4,9 @@
 package config
 
 import (
-	"github.com/flavio/kuberlr/internal/common"
 	"path/filepath"
+
+	"github.com/flavio/kuberlr/internal/common"
 )
 
 var configPaths = []string{

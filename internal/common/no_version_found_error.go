@@ -1,8 +1,6 @@
 package common
 
-type noVersionFound interface {
-	NoVersionFound() bool
-}
+import "errors"
 
 // NoVersionFoundError error is raised when no kubectl binary
 // has yet been downloaded by kuberlr
@@ -15,14 +13,9 @@ func (e *NoVersionFoundError) Error() string {
 	return "No local kubectl binaries available"
 }
 
-// NoVersionFound returns true if the error is a NoVersionFoundError instance
-func (e *NoVersionFoundError) NoVersionFound() bool {
-	return true
-}
-
 // IsNoVersionFound returns true when the given error is of type
 // NoVersionFoundError
 func IsNoVersionFound(err error) bool {
-	t, ok := err.(noVersionFound)
-	return ok && t.NoVersionFound()
+	var noVersionFoundErr *NoVersionFoundError
+	return errors.As(err, &noVersionFoundErr)
 }

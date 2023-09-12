@@ -29,6 +29,7 @@ func (m *mockFinder) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
 	local, _ := m.localKubectlBinaries()
 	system, _ := m.systemKubectlBinaries()
 
+	//nolint: gocritic
 	all := append(local, system...)
 	SortKubectlByVersion(all, reverseSort)
 	return all

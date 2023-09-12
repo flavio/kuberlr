@@ -1,8 +1,10 @@
 package downloader
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +32,7 @@ type Downloder struct {
 }
 
 func (d *Downloder) getContentsOfURL(url string) (string, error) {
+	//nolint: gosec,noctx // the url is built internally
 	res, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -74,7 +77,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			return err
 		}
 
-		if _, err := os.Stat(filepath.Dir(destination)); err != nil {
+		if _, err = os.Stat(filepath.Dir(destination)); err != nil {
 			if os.IsNotExist(err) {
 				err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
 			}
@@ -101,13 +104,13 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	return firstErr
 }
 
-func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
+func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
-	u, err := url.Parse(fmt.Sprintf(
+	url, err := url.Parse(fmt.Sprintf(
 		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl%s",
-		v.Major,
-		v.Minor,
-		v.Patch,
+		version.Major,
+		version.Minor,
+		version.Patch,
 		runtime.GOOS,
 		runtime.GOARCH,
 		osexec.Ext,
@@ -116,28 +119,28 @@ func (d *Downloder) kubectlDownloadURL(v semver.Version) (string, error) {
 		return "", err
 	}
 
-	return u.String(), nil
+	return url.String(), nil
 }
 
-func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error {
+func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error { //nolint: funlen
 	shaURLToGet := urlToGet + ".sha256"
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
-		return fmt.Errorf("Error while trying to get contents of %s: %v", shaURLToGet, err)
+		return fmt.Errorf("error while trying to get contents of %s: %w", shaURLToGet, err)
 	}
 	shaExpected = strings.TrimRight(shaExpected, "\n")
 
-	req, err := http.NewRequest("GET", urlToGet, nil)
+	req, err := http.NewRequestWithContext(context.TODO(), http.MethodGet, urlToGet, nil)
 	if err != nil {
 		return fmt.Errorf(
-			"Error while issuing GET request against %s: %v",
+			"error while issuing GET request against %s: %w",
 			urlToGet, err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf(
-			"Error while issuing GET request against %s: %v",
+			"error while issuing GET request against %s: %w",
 			urlToGet, err)
 	}
 	defer resp.Body.Close()
@@ -151,7 +154,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	}
 	temporaryDestinationFile, err := os.CreateTemp(os.TempDir(), "kuberlr-kubectl-")
 	if err != nil {
-		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
+		return fmt.Errorf("error trying to create temporary file in %s: %w", os.TempDir(), err)
 	}
 
 	tmpname := temporaryDestinationFile.Name()
@@ -178,7 +181,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	if err != nil {
 		temporaryDestinationFile.Close()
 		return fmt.Errorf(
-			"Error while downloading text of %s into file %s: %v",
+			"error while downloading text of %s into file %s: %w",
 			urlToGet, tmpname, err)
 	}
 
@@ -193,13 +196,13 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 
 	err = os.Rename(tmpname, destination)
 	if err != nil {
-		linkErr, ok := err.(*os.LinkError)
-		if ok {
+		var linkErr *os.LinkError
+		if errors.As(err, &linkErr) {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
 			var tempInput []byte
 			tempInput, err = os.ReadFile(tmpname)
 			if err != nil {
-				return fmt.Errorf("Error reading temporary file %s: %v",
+				return fmt.Errorf("error reading temporary file %s: %w",
 					tmpname, err)
 			}
 			err = os.WriteFile(destination, tempInput, mode)

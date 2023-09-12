@@ -52,13 +52,14 @@ func newRootCmd() *cobra.Command {
 
 func kubectlWrapperMode() {
 	cfg := config.NewCfg()
+	//nolint: varnamelen
 	v, err := cfg.Load()
 	if err != nil {
 		klog.Fatal(err)
 	}
 
-	kFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
-	versioner := finder.NewVersioner(kFinder)
+	kubectlFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
+	versioner := finder.NewVersioner(kubectlFinder)
 	version, err := versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
 	if err != nil {
 		klog.Fatal(err)

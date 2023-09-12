@@ -12,18 +12,18 @@ import (
 
 func createKubeClient(timeout int64) (*kubernetes.Clientset, error) {
 	var cliKubeconfig string
-	for i := 1; i < len(os.Args); i++ {
-		if i+1 < len(os.Args) && os.Args[i] == "--kubeconfig" {
-			cliKubeconfig = os.Args[i+1]
+	for index := 1; index < len(os.Args); index++ {
+		if index+1 < len(os.Args) && os.Args[index] == "--kubeconfig" {
+			cliKubeconfig = os.Args[index+1]
 			// don't break here; in case there are multiple --kubeconfig options,
 			// the last one takes precedence
 			continue
 		}
-		if strings.HasPrefix(os.Args[i], "--kubeconfig=") {
-			cliKubeconfig = strings.TrimPrefix(os.Args[i], "--kubeconfig=")
+		if strings.HasPrefix(os.Args[index], "--kubeconfig=") {
+			cliKubeconfig = strings.TrimPrefix(os.Args[index], "--kubeconfig=")
 			continue
 		}
-		if os.Args[i] == "--" {
+		if os.Args[index] == "--" {
 			break
 		}
 	}

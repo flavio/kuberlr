@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver/v4"

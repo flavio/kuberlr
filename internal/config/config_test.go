@@ -12,23 +12,23 @@ type testData struct {
 	FakeHome   string
 }
 
-func setup() (td testData, err error) {
-	td.FakeUsrEtc, err = os.MkdirTemp("", "fake-usr-etc")
+func setup() (testData, error) {
+	fakeUsrEtc, err := os.MkdirTemp("", "fake-usr-etc")
 	if err != nil {
-		return
+		return testData{}, err
 	}
 
-	td.FakeEtc, err = os.MkdirTemp("", "fake-etc")
+	fakeEtc, err := os.MkdirTemp("", "fake-etc")
 	if err != nil {
-		return
+		return testData{}, err
 	}
 
-	td.FakeHome, err = os.MkdirTemp("", "fake-home")
+	fakeHome, err := os.MkdirTemp("", "fake-home")
 	if err != nil {
-		return
+		return testData{}, err
 	}
 
-	return
+	return testData{FakeUsrEtc: fakeUsrEtc, FakeEtc: fakeEtc, FakeHome: fakeHome}, nil
 }
 
 func teardown(td testData) {
@@ -41,10 +41,11 @@ func writeConfig(path, data string) error {
 	return os.WriteFile(
 		filepath.Join(path, "kuberlr.conf"),
 		[]byte(data),
-		0644)
+		0600)
 }
 
 func TestOnlySystemConfigExists(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -70,6 +71,7 @@ func TestOnlySystemConfigExists(t *testing.T) {
 }
 
 func TestHomeConfigOverridesSystemOne(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -99,6 +101,7 @@ func TestHomeConfigOverridesSystemOne(t *testing.T) {
 }
 
 func TestMergeConfigs(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -135,6 +138,7 @@ AllowDownload = true
 		Paths: []string{td.FakeUsrEtc, td.FakeEtc, td.FakeHome},
 	}
 
+	//nolint: varnamelen
 	v, err := c.Load()
 	if err != nil {
 		t.Errorf("Unexpected error loading config: %v", err)

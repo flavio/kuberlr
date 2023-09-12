@@ -33,6 +33,7 @@ type iFinder interface {
 
 // Versioner is used to manage the local kubectl binaries used by kuberlr
 type Versioner struct {
+	//nolint: revive
 	kFinder    iFinder
 	downloader downloadHelper
 	apiServer  kubeAPIHelper
@@ -60,10 +61,10 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		} else {
 			klog.V(1).Info(err)
 		}
-		kubectl, err := v.kFinder.MostRecentKubectlAvailable()
-		if err == nil {
+		kubectl, internalErr := v.kFinder.MostRecentKubectlAvailable()
+		if internalErr == nil {
 			return kubectl.Version, nil
-		} else if common.IsNoVersionFound(err) {
+		} else if common.IsNoVersionFound(internalErr) {
 			klog.V(2).Info("No local kubectl binary found, fetching latest stable release version")
 			return v.downloader.UpstreamStableVersion()
 		}
@@ -81,7 +82,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 	}
 
 	if !allowDownload {
-		return "", errors.New("The right kubectl is missing, binary downloads from kubernetes' upstream mirror are disabled")
+		return "", errors.New("the right kubectl is missing, binary downloads from kubernetes' upstream mirror are disabled")
 	}
 
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())
@@ -91,7 +92,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 		common.LocalDownloadDir(),
 		common.BuildKubectlNameForLocalBin(version))
 
-	if err := v.downloader.GetKubectlBinary(version, filename); err != nil {
+	if err = v.downloader.GetKubectlBinary(version, filename); err != nil {
 		return "", err
 	}
 

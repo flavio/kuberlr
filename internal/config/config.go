@@ -25,6 +25,7 @@ func NewCfg() *Cfg {
 
 // Load reads the configuration files from disks and merges them
 func (c *Cfg) Load() (*viper.Viper, error) {
+	//nolint: varnamelen
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
@@ -45,7 +46,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	return v, nil
 }
 
-func mergeConfig(v *viper.Viper, extraConfigPath string) error {
+func mergeConfig(v *viper.Viper, extraConfigPath string) error { //nolint: varnamelen
 	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
 
 	_, err := os.Stat(cfgFile)

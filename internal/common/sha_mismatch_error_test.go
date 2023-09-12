@@ -1,8 +1,9 @@
 package common_test
 
 import (
-	"github.com/flavio/kuberlr/internal/common"
 	"testing"
+
+	"github.com/flavio/kuberlr/internal/common"
 )
 
 func TestShaError(t *testing.T) {

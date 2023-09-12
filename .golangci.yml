@@ -1,0 +1,71 @@
+# This file contains all available configuration options
+# with their default values.
+
+# options for analysis running
+run:
+  tests: true
+  timeout: 10m
+
+issues:
+  exclude-rules:
+    - linters:
+        - funlen
+      # Disable 'funlen' linter for test functions.
+      # It's common for table-driven tests to be more than 60 characters long
+      source: "^func Test"
+
+linters:
+  enable-all: true
+  disable:
+    - exhaustivestruct
+    - exhaustruct
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - godot
+    - goerr113
+    - golint
+    - gofumpt
+    - gomnd
+    - maligned
+    - nlreturn
+    - paralleltest
+    - scopelint
+    - testpackage
+    - wsl
+    - lll # long lines
+    - wrapcheck
+    - godox
+    - depguard
+    # https://github.com/golangci/golangci-lint/issues/541
+    - interfacer
+    - interfacebloat
+    # deprecated:
+    - deadcode
+    - ifshort
+    - structcheck
+    - varcheck
+    - nosnakecase
+    # disabled because generics:
+    - rowserrcheck
+    - sqlclosecheck
+    - wastedassign
+    # disabled because of replacement
+    - gomoddirectives
+
+linters-settings:
+  cyclop:
+    max-complexity: 13
+  nestif:
+    min-complexity: 8
+  govet:
+    # Report about shadowed variables.
+    # Default: false
+    check-shadowing: true
+    settings:
+      # Analyzer name, run `go tool vet help` to see all analyzers.
+      shadow:
+        # Whether to be strict about shadowing; can be noisy.
+        # Default: false
+        strict: true

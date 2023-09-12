@@ -7,23 +7,23 @@ import (
 )
 
 func TestSortAsc(t *testing.T) {
-	b1 := KubectlBinary{
+	bin1 := KubectlBinary{
 		Path:    "b1",
 		Version: semver.MustParse("1.0.0"),
 	}
 
-	b2 := KubectlBinary{
+	bin2 := KubectlBinary{
 		Path:    "b2",
 		Version: semver.MustParse("2.0.0"),
 	}
 
-	b3 := KubectlBinary{
+	bin3 := KubectlBinary{
 		Path:    "b3",
 		Version: semver.MustParse("2.0.3"),
 	}
 
-	expected := KubectlBinaries{b1, b2, b3}
-	actual := KubectlBinaries{b3, b1, b2}
+	expected := KubectlBinaries{bin1, bin2, bin3}
+	actual := KubectlBinaries{bin3, bin1, bin2}
 
 	SortKubectlByVersion(actual, false)
 
@@ -35,23 +35,23 @@ func TestSortAsc(t *testing.T) {
 }
 
 func TestSortDesc(t *testing.T) {
-	b1 := KubectlBinary{
+	bin1 := KubectlBinary{
 		Path:    "b1",
 		Version: semver.MustParse("1.0.0"),
 	}
 
-	b2 := KubectlBinary{
+	bin2 := KubectlBinary{
 		Path:    "b2",
 		Version: semver.MustParse("2.0.0"),
 	}
 
-	b3 := KubectlBinary{
+	bin3 := KubectlBinary{
 		Path:    "b3",
 		Version: semver.MustParse("2.0.3"),
 	}
 
-	expected := KubectlBinaries{b3, b2, b1}
-	actual := KubectlBinaries{b3, b1, b2}
+	expected := KubectlBinaries{bin3, bin2, bin1}
+	actual := KubectlBinaries{bin3, bin1, bin2}
 
 	SortKubectlByVersion(actual, true)
 

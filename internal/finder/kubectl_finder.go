@@ -107,14 +107,14 @@ func (f *KubectlFinder) MostRecentKubectlAvailable() (KubectlBinary, error) {
 
 func inferLocalKubectlVersion(filename string) (semver.Version, error) {
 	var major, minor, patch uint64
-	n, err := fmt.Sscanf(
+	numScans, err := fmt.Sscanf(
 		osexec.TrimExt(filename),
 		common.KubectlLocalNamingScheme,
 		&major,
 		&minor,
 		&patch)
 
-	if n == 3 && err == nil {
+	if numScans == 3 && err == nil {
 		sv := semver.Version{
 			Major: major,
 			Minor: minor,
@@ -122,18 +122,18 @@ func inferLocalKubectlVersion(filename string) (semver.Version, error) {
 		}
 		return sv, nil
 	}
-	return semver.Version{}, errors.New("Not parsable")
+	return semver.Version{}, errors.New("not parsable")
 }
 
 func inferSystemKubectlVersion(filename string) (semver.Version, error) {
 	var major, minor uint64
-	n, err := fmt.Sscanf(
+	numScans, err := fmt.Sscanf(
 		osexec.TrimExt(filename),
 		common.KubectlSystemNamingScheme,
 		&major,
 		&minor)
 
-	if n == 2 && err == nil {
+	if numScans == 2 && err == nil {
 		sv := semver.Version{
 			Major: major,
 			Minor: minor,
@@ -141,7 +141,7 @@ func inferSystemKubectlVersion(filename string) (semver.Version, error) {
 		}
 		return sv, nil
 	}
-	return semver.Version{}, errors.New("Not parsable")
+	return semver.Version{}, errors.New("not parsable")
 }
 
 func findKubectlBinaries(path string) (KubectlBinaries, error) {
@@ -155,21 +155,21 @@ func findKubectlBinaries(path string) (KubectlBinaries, error) {
 		return binaries, err
 	}
 
-	for _, f := range kubectlBins {
-		var sv semver.Version
-		var err error
+	for _, file := range kubectlBins {
+		var version semver.Version
+		var internalErr error
 
-		sv, err = inferLocalKubectlVersion(f.Name())
-		if err != nil {
-			sv, err = inferSystemKubectlVersion(f.Name())
-			if err != nil {
+		version, internalErr = inferLocalKubectlVersion(file.Name())
+		if internalErr != nil {
+			version, internalErr = inferSystemKubectlVersion(file.Name())
+			if internalErr != nil {
 				continue
 			}
 		}
 
 		bin := KubectlBinary{
-			Path:    filepath.Join(path, f.Name()),
-			Version: sv,
+			Path:    filepath.Join(path, file.Name()),
+			Version: version,
 		}
 		binaries = append(binaries, bin)
 	}

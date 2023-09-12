@@ -26,6 +26,7 @@ func setupFilesystemTest() (localCacheTestData, error) {
 		return localCacheTestData{}, err
 	}
 
+	//nolint: varnamelen
 	td := localCacheTestData{
 		FakeHome:       fakeHome,
 		FakeSysBinPath: fakeSysBin,
@@ -48,13 +49,14 @@ func teardownFilesystemTest(td localCacheTestData) error {
 }
 
 func TestAllKubectlBinaries(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
 	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		if err = teardownFilesystemTest(td); err != nil {
+			panic(fmt.Sprintf("Error while tearing down test filesystem: %v\n", err))
 		}
 	}()
 
@@ -62,7 +64,7 @@ func TestAllKubectlBinaries(t *testing.T) {
 		td.FakeHome,
 		[]string{"1.4.2"},
 		&localKubectlNamer{})
-	if err := createFakeKubectlBinaries(localBins); err != nil {
+	if err = createFakeKubectlBinaries(localBins); err != nil {
 		t.Error(err)
 	}
 
@@ -70,10 +72,11 @@ func TestAllKubectlBinaries(t *testing.T) {
 		td.FakeSysBinPath,
 		[]string{"2.1.3"},
 		&systemKubectlNamer{})
-	if err := createFakeKubectlBinaries(systemBins); err != nil {
+	if err = createFakeKubectlBinaries(systemBins); err != nil {
 		t.Error(err)
 	}
 
+	//nolint: gocritic
 	expected := append(systemBins, localBins...)
 	actual := td.Finder.AllKubectlBinaries(true)
 
@@ -92,13 +95,14 @@ func TestAllKubectlBinaries(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
 	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		if err = teardownFilesystemTest(td); err != nil {
+			panic(fmt.Sprintf("Error while tearing down test filesystem: %v\n", err))
 		}
 	}()
 
@@ -112,13 +116,14 @@ func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
+	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
 	}
 	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		if err = teardownFilesystemTest(td); err != nil {
+			panic(fmt.Sprintf("Error while tearing down test filesystem: %v\n", err))
 		}
 	}()
 
@@ -132,13 +137,14 @@ func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
 }
 
 func findCompatibleKubectlTester(version string, localVersions, systemVersions []string, expected string) error {
+	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := teardownFilesystemTest(td); err != nil {
-			fmt.Printf("Error while tearing down test filesystem: %v\n", err)
+		if err = teardownFilesystemTest(td); err != nil {
+			panic(fmt.Sprintf("Error while tearing down test filesystem: %v\n", err))
 		}
 	}()
 
@@ -146,7 +152,7 @@ func findCompatibleKubectlTester(version string, localVersions, systemVersions [
 		td.FakeHome,
 		localVersions,
 		&localKubectlNamer{})
-	if err := createFakeKubectlBinaries(localBins); err != nil {
+	if err = createFakeKubectlBinaries(localBins); err != nil {
 		return err
 	}
 
@@ -154,7 +160,7 @@ func findCompatibleKubectlTester(version string, localVersions, systemVersions [
 		td.FakeSysBinPath,
 		systemVersions,
 		&systemKubectlNamer{})
-	if err := createFakeKubectlBinaries(systemBins); err != nil {
+	if err = createFakeKubectlBinaries(systemBins); err != nil {
 		return err
 	}
 

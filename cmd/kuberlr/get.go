@@ -26,7 +26,7 @@ func NewGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version, err := semver.ParseTolerant(args[0])
 			if err != nil {
-				return fmt.Errorf("Invalid version: %v", err)
+				return fmt.Errorf("invalid version: %w", err)
 			}
 
 			destination := filepath.Join(

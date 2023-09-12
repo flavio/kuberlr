@@ -86,8 +86,6 @@ go-version-check:
 lint: deps
 	# explicitly enable GO111MODULE otherwise go mod will fail
 	GO111MODULE=on go mod tidy && GO111MODULE=on go mod vendor && GO111MODULE=on go mod verify
-	# run go vet
-	$(GO) vet ./...
 	# run go fmt
 	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
 	# run golangci-lint

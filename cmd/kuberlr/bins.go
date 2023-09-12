@@ -12,25 +12,27 @@ import (
 )
 
 func printBinTable(bins finder.KubectlBinaries) {
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"#", "Version", "Binary"})
+	tableWriter := table.NewWriter()
+	tableWriter.SetOutputMirror(os.Stdout)
+	tableWriter.AppendHeader(table.Row{"#", "Version", "Binary"})
 	for i, b := range bins {
-		t.AppendRow([]interface{}{i + 1, b.Version, b.Path})
+		tableWriter.AppendRow([]interface{}{i + 1, b.Version, b.Path})
 	}
-	t.Render()
+	tableWriter.Render()
 }
 
 // NewBinsCmd creates a new `kuberlr bins` cobra command
 func NewBinsCmd() *cobra.Command {
+	//nolint: forbidigo
 	return &cobra.Command{
 		Use:   "bins",
 		Short: "Print information about the kubectl binaries found",
 		Run: func(cmd *cobra.Command, args []string) {
-			kFinder := finder.NewKubectlFinder("", "")
-			systemBins, err := kFinder.SystemKubectlBinaries()
+			kubectlFinder := finder.NewKubectlFinder("", "")
+			systemBins, err := kubectlFinder.SystemKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("system-wide kubectl binaries"))
+			//nolint: gocritic
 			if err != nil {
 				fmt.Printf("Error retrieving binaries: %v\n", err)
 			} else if len(systemBins) == 0 {
@@ -40,9 +42,10 @@ func NewBinsCmd() *cobra.Command {
 			}
 
 			fmt.Printf("\n\n")
-			localBins, err := kFinder.LocalKubectlBinaries()
+			localBins, err := kubectlFinder.LocalKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("local kubectl binaries"))
+			//nolint: gocritic
 			if err != nil {
 				fmt.Printf("Error retrieving binaries: %v\n", err)
 			} else if len(localBins) == 0 {
