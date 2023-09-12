@@ -12,6 +12,7 @@ jobs:
     permissions:
       packages: write
       id-token: write
+      contents: write
 
     steps:
       - name: Checkout
