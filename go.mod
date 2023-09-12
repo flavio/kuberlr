@@ -10,6 +10,6 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.16.0
-	k8s.io/client-go v0.20.0
+	k8s.io/client-go v0.28.1
 	k8s.io/klog v1.0.0
 )
