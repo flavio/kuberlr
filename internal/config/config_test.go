@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,17 +13,17 @@ type testData struct {
 }
 
 func setup() (td testData, err error) {
-	td.FakeUsrEtc, err = ioutil.TempDir("", "fake-usr-etc")
+	td.FakeUsrEtc, err = os.MkdirTemp("", "fake-usr-etc")
 	if err != nil {
 		return
 	}
 
-	td.FakeEtc, err = ioutil.TempDir("", "fake-etc")
+	td.FakeEtc, err = os.MkdirTemp("", "fake-etc")
 	if err != nil {
 		return
 	}
 
-	td.FakeHome, err = ioutil.TempDir("", "fake-home")
+	td.FakeHome, err = os.MkdirTemp("", "fake-home")
 	if err != nil {
 		return
 	}
@@ -39,7 +38,7 @@ func teardown(td testData) {
 }
 
 func writeConfig(path, data string) error {
-	return ioutil.WriteFile(
+	return os.WriteFile(
 		filepath.Join(path, "kuberlr.conf"),
 		[]byte(data),
 		0644)

@@ -13,7 +13,6 @@ import (
 type mockFinder struct {
 	localKubectlBinaries       func() (KubectlBinaries, error)
 	systemKubectlBinaries      func() (KubectlBinaries, error)
-	allKubectlBinaries         func(reverseSort bool) KubectlBinaries
 	findCompatibleKubectl      func(requestedVersion semver.Version) (KubectlBinary, error)
 	mostRecentKubectlAvailable func() (KubectlBinary, error)
 }

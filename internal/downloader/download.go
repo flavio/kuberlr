@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -44,7 +43,7 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 			)
 	}
 
-	v, err := ioutil.ReadAll(res.Body)
+	v, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		return "", err
@@ -150,7 +149,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			resp.Status,
 		)
 	}
-	temporaryDestinationFile, err := ioutil.TempFile(os.TempDir(), "kuberlr-kubectl-")
+	temporaryDestinationFile, err := os.CreateTemp(os.TempDir(), "kuberlr-kubectl-")
 	if err != nil {
 		return fmt.Errorf("Error trying to create temporary file in %s: %v", os.TempDir(), err)
 	}
@@ -198,12 +197,12 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 		if ok {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
 			var tempInput []byte
-			tempInput, err = ioutil.ReadFile(tmpname)
+			tempInput, err = os.ReadFile(tmpname)
 			if err != nil {
 				return fmt.Errorf("Error reading temporary file %s: %v",
 					tmpname, err)
 			}
-			err = ioutil.WriteFile(destination, tempInput, mode)
+			err = os.WriteFile(destination, tempInput, mode)
 		}
 	} else {
 		err = os.Chmod(destination, mode)

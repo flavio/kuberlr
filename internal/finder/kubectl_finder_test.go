@@ -2,7 +2,6 @@ package finder
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -17,12 +16,12 @@ type localCacheTestData struct {
 }
 
 func setupFilesystemTest() (localCacheTestData, error) {
-	fakeHome, err := ioutil.TempDir("", "kuberlr-fake-home")
+	fakeHome, err := os.MkdirTemp("", "kuberlr-fake-home")
 	if err != nil {
 		return localCacheTestData{}, err
 	}
 
-	fakeSysBin, err := ioutil.TempDir("", "kuberlr-fake-usr-bin")
+	fakeSysBin, err := os.MkdirTemp("", "kuberlr-fake-usr-bin")
 	if err != nil {
 		return localCacheTestData{}, err
 	}

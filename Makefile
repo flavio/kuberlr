@@ -1,5 +1,6 @@
 GOMOD ?= on
 GO ?= GO111MODULE=$(GOMOD) go
+BINPATH := $(abspath ./bin)
 
 #Don't enable mod=vendor when GOMOD is off or else go build/install will fail
 GOMODFLAG ?=
@@ -12,10 +13,14 @@ GO_VERSION     := $(shell $(GO) version | sed -e 's/^[^0-9.]*\([0-9.]*\).*/\1/')
 GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
 GO_VERSION_MIN := $(shell echo $(GO_VERSION) | cut -f2 -d'.')
 
+# golangci linter
+GOLANGCI_LINT_VER := v1.53.3
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(BINPATH)/$(GOLANGCI_LINT_BIN)
+
 GOFMT ?= gofmt
 RM = rm
 
-BINPATH       := $(abspath ./bin)
 GOBINPATH     := $(shell $(GO) env GOPATH)/bin
 COMMIT        := $(shell git rev-parse HEAD)
 DATE_FMT = +%Y%m%d
@@ -85,12 +90,12 @@ lint: deps
 	$(GO) vet ./...
 	# run go fmt
 	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
-	# run golint
-	golint -set_exit_status cmd/... internal/... pkg/...
+	# run golangci-lint
+	$(GOLANGCI_LINT) run
 
 .PHONY: deps
 deps:
-	go get -u golang.org/x/lint/golint
+	GOBIN=$(BINPATH) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
 # tests
 .PHONY: test

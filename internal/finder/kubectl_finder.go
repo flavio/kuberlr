@@ -3,10 +3,10 @@ package finder
 import (
 	"errors"
 	"fmt"
-	"github.com/flavio/kuberlr/internal/osexec"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/flavio/kuberlr/internal/common"
 
@@ -147,7 +147,7 @@ func inferSystemKubectlVersion(filename string) (semver.Version, error) {
 func findKubectlBinaries(path string) (KubectlBinaries, error) {
 	var binaries KubectlBinaries
 
-	kubectlBins, err := ioutil.ReadDir(path)
+	kubectlBins, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return binaries, nil
