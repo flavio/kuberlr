@@ -2,38 +2,45 @@
 # Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-  - go mod download
+    - go mod download
 builds:
-- env:
-  - CGO_ENABLED=0
-  main: ./cmd/kuberlr
-  ldflags:
-    - -X=github.com/flavio/kuberlr/pkg/kuberlr.Version={{.Version}}
-    - -X=github.com/flavio/kuberlr/pkg/kuberlr.BuildDate={{.Date}}
-    - -X=github.com/flavio/kuberlr/pkg/kuberlr.Tag={{.Tag}}
-  goos:
-    - linux
-    - darwin
-    - windows
-  goarch:
-    - amd64
-    - arm
-    - arm64
-    - s390x
+  - env:
+      - CGO_ENABLED=0
+    main: ./cmd/kuberlr
+    ldflags:
+      - -X=github.com/flavio/kuberlr/pkg/kuberlr.Version={{.Version}}
+      - -X=github.com/flavio/kuberlr/pkg/kuberlr.BuildDate={{.Date}}
+      - -X=github.com/flavio/kuberlr/pkg/kuberlr.Tag={{.Tag}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - s390x
+  - hooks:
+      post:
+        - sh -c "cosign sign-blob --yes --output-certificate dist/{{ .ProjectName }}_{{ .Version }}_{{ .Target }}.pem --output-signature dist/{{ .ProjectName }}_{{ .Version }}_{{ .Target }}.sig {{ .Path }}"
+release:
+  extra_files:
+    - glob: dist/*.sig
+    - glob: dist/*.pem
 universal_binaries:
   - replace: false
 archives:
-- format_overrides:
-  - goos: windows
-    format: zip
-  wrap_in_directory: true
+  - format_overrides:
+      - goos: windows
+        format: zip
+    wrap_in_directory: true
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"
