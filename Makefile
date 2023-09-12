@@ -13,8 +13,6 @@ GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
 GO_VERSION_MIN := $(shell echo $(GO_VERSION) | cut -f2 -d'.')
 
 GOFMT ?= gofmt
-GO_MD2MAN ?= go-md2man
-LN = ln
 RM = rm
 
 BINPATH       := $(abspath ./bin)
@@ -52,15 +50,6 @@ all: install
 build: go-version-check
 	$(GO) build $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
 
-MANPAGES_MD := $(wildcard docs/man/*.md)
-MANPAGES    := $(MANPAGES_MD:%.md=%)
-
-docs/man/%.1: docs/man/%.1.md
-	$(GO_MD2MAN) -in $< -out $@
-
-.PHONY: docs
-docs: $(MANPAGES)
-
 .PHONY: install
 install: go-version-check
 	$(GO) install $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
@@ -86,7 +75,7 @@ release:
 .PHONY: go-version-check
 go-version-check:
 	@[ $(GO_VERSION_MAJ) -ge 2 ] || \
-		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 12 ] || (echo "FATAL: Go version should be >= 1.12.x" ; exit 1 ; )
+		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 20 ] || (echo "FATAL: Go version should be >= 1.20.x" ; exit 1 ; )
 
 .PHONY: lint
 lint: deps
@@ -102,16 +91,6 @@ lint: deps
 .PHONY: deps
 deps:
 	go get -u golang.org/x/lint/golint
-
-.PHONY: pre-commit-install
-pre-commit-install:
-	test -f $(BINPATH)/bin/pre-commit || curl -sfL https://pre-commit.com/install-local.py | HOME=$(BINPATH) python -
-	$(BINPATH)/bin/pre-commit install
-
-.PHONY: pre-commit-uninstall
-pre-commit-uninstall:
-	test -f $(BINPATH)/bin/pre-commit || curl -sfL https://pre-commit.com/install-local.py | HOME=$(BINPATH) python -
-	$(BINPATH)/bin/pre-commit uninstall
 
 # tests
 .PHONY: test
