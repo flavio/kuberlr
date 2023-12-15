@@ -33,7 +33,6 @@ type iFinder interface {
 
 // Versioner is used to manage the local kubectl binaries used by kuberlr
 type Versioner struct {
-	//nolint: revive
 	kFinder    iFinder
 	downloader downloadHelper
 	apiServer  kubeAPIHelper
