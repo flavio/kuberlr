@@ -14,7 +14,7 @@ GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
 GO_VERSION_MIN := $(shell echo $(GO_VERSION) | cut -f2 -d'.')
 
 # golangci linter
-GOLANGCI_LINT_VER := v1.53.3
+GOLANGCI_LINT_VER := v1.55.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BINPATH)/$(GOLANGCI_LINT_BIN)
 

@@ -11,7 +11,7 @@ import (
 
 type kubectlNamer interface {
 	ID() string
-	Compute(semver.Version) string
+	Compute(version semver.Version) string
 }
 
 type localKubectlNamer struct {
