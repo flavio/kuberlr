@@ -14,12 +14,12 @@ const DefaultTimeout = 5
 func ThisExecutableDir() string {
 	execPath, err := os.Executable()
 	if err != nil {
-		return nil
+		return ""
 	}
 
-	execPath, err := filepath.EvalSymlinks(execPath)
+	execPath, err = filepath.EvalSymlinks(execPath)
 	if err != nil {
-		return nil
+		return ""
 	}
 
 	return filepath.Dir(execPath)
@@ -73,7 +73,7 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 }
 
 func mergeConfig(v *viper.Viper, extraConfigPath string) error {
-	if extraConfigPath == nil {
+	if len(s) == 0 {
 		return nil
 	}
 	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
