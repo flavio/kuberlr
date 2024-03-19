@@ -35,6 +35,7 @@ func NewKubectlWrapperCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "kubectl",
 		Short: "Wrap and exec a suitable version kubectl command",
+		DisableFlagParsing: false,
 		Run: func(cmd *cobra.Command, args []string) {
 			kubectlWrapperMode(args)
 		},
