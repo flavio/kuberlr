@@ -73,7 +73,7 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 }
 
 func mergeConfig(v *viper.Viper, extraConfigPath string) error {
-	if len(s) == 0 {
+	if len(extraConfigPath) == 0 {
 		return nil
 	}
 	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
