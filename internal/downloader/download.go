@@ -34,7 +34,6 @@ type Downloder struct {
 
 func getKbReleaseURL(path string) (string, error) {
 	cfg := config.NewCfg()
-	//nolint: varnamelen
 	v, err := cfg.Load()
 	if err != nil {
 		return "", err
