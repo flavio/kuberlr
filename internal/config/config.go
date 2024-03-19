@@ -30,6 +30,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
 	v.SetDefault("Timeout", 5)
+	v.SetDefault("KbReleaseUrl", "https://storage.googleapis.com/kubernetes-release")
 
 	v.SetConfigType("toml")
 
