@@ -11,6 +11,20 @@ import (
 
 const DefaultTimeout = 5
 
+func ThisExecutableDir() string {
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+
+	execPath, err := filepath.EvalSymlinks(execPath)
+	if err != nil {
+		return nil
+	}
+
+	return filepath.Dir(execPath)
+}
+
 // Cfg is used to retrieve the configuration of kuberlr.
 type Cfg struct {
 	Paths []string
@@ -59,6 +73,9 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 }
 
 func mergeConfig(v *viper.Viper, extraConfigPath string) error {
+	if extraConfigPath == nil {
+		return nil
+	}
 	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
 
 	_, err := os.Stat(cfgFile)

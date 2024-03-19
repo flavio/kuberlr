@@ -12,5 +12,6 @@ import (
 var configPaths = []string{ //nolint: gochecknoglobals // arrays cannot be go constants
 	"/usr/etc/",
 	"/etc/",
+	ThisExecutableDir(),
 	filepath.Join(common.HomeDir(), ".kuberlr"),
 }
