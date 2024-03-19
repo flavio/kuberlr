@@ -32,7 +32,7 @@ const KubectlStableURL = "release/stable.txt"
 type Downloder struct {
 }
 
-func (d *Downloder) getKbReleaseURL(path string) (string, error) {
+func getKbReleaseURL(path string) (string, error) {
 	cfg := config.NewCfg()
 	//nolint: varnamelen
 	v, err := cfg.Load()
