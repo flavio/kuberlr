@@ -87,7 +87,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	// - sha256 is avaliable from v1.16.0
 	// - sha512 is avaliable from 1.12.0
 	isNew, err := semver.ParseRange(">=1.12.0")
-	const useSha512 = err != nil || isNew(version)
+	useSha512 := err != nil || isNew(version)
 
 	for iter := 1; iter <= maxNumTries; iter++ {
 		downloadURL, err := d.kubectlDownloadURL(version)
