@@ -2,7 +2,7 @@ package downloader
 
 import (
 	"context"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // sha1 is now we needed
 	"crypto/sha512"
 	"encoding/hex"
 	"errors"
@@ -203,6 +203,7 @@ func (d *Downloder) download(desc string, urlToGet string, useSha512 bool, desti
 	)
 	hasher := sha512.New()
 	if !useSha512 {
+		//nolint:gosec // sha1 is now we needed
 		hasher = sha1.New()
 	}
 
