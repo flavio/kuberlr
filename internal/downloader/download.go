@@ -2,7 +2,8 @@ package downloader
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/sha1"
+	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -82,6 +83,12 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	const maxNumTries = 3
 	const timeToSleepOnRetryPerIter = 10 // seconds
 
+	// - sha1 is avaliable in range [1.0.0, 1.18)
+	// - sha256 is avaliable from v1.16.0
+	// - sha512 is avaliable from 1.12.0
+	isNew, err := semver.ParseRange(">=1.12.0")
+	const useSha512 = err != nil || isNew(version)
+
 	for iter := 1; iter <= maxNumTries; iter++ {
 		downloadURL, err := d.kubectlDownloadURL(version)
 		if err != nil {
@@ -97,7 +104,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			}
 		}
 
-		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, destination, 0755)
+		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, useSha512, destination, 0755)
 		if err == nil {
 			return nil
 		}
@@ -138,8 +145,13 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	return url.String(), nil
 }
 
-func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error { //nolint: funlen
-	shaURLToGet := urlToGet + ".sha256"
+func (d *Downloder) download(desc, urlToGet, useSha512 bool, destination string, mode os.FileMode) error { //nolint: funlen
+	shaURLToGet := urlToGet
+	if useSha512 {
+		shaURLToGet += ".sha512"
+	} else {
+		shaURLToGet += ".sha1"
+	}
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
 		return fmt.Errorf("error while trying to get contents of %s: %w", shaURLToGet, err)
@@ -191,7 +203,10 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			fmt.Fprintln(os.Stderr, " done.")
 		}),
 	)
-	hasher := sha256.New()
+	hasher := sha512.New()
+	if !useSha512 {
+		hasher := sha1.New()
+	}
 
 	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
 	if err != nil {
