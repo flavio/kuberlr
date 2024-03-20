@@ -203,7 +203,7 @@ func (d *Downloder) download(desc string, urlToGet string, useSha512 bool, desti
 	)
 	hasher := sha512.New()
 	if !useSha512 {
-		hasher := sha1.New()
+		hasher = sha1.New()
 	}
 
 	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
