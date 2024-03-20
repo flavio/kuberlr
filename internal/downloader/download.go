@@ -146,11 +146,9 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 }
 
 func (d *Downloder) download(desc, urlToGet, useSha512 bool, destination string, mode os.FileMode) error { //nolint: funlen
-	shaURLToGet := urlToGet
-	if useSha512 {
-		shaURLToGet += ".sha512"
-	} else {
-		shaURLToGet += ".sha1"
+	shaURLToGet := urlToGet + ".sha512"
+	if !useSha512 {
+		shaURLToGet = urlToGet + ".sha1"
 	}
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
