@@ -12,5 +12,6 @@ import (
 var configPaths = []string{
 	filepath.Join(os.Getenv("APPDATA"), "kuberlr"),
 	filepath.Join(os.Getenv("PROGRAMDATA"), "kuberlr"),
+	ThisExecutableDir(),
 	filepath.Join(common.HomeDir(), ".kuberlr"),
 }
