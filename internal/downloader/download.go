@@ -16,15 +16,17 @@ import (
 	"time"
 
 	"github.com/flavio/kuberlr/internal/common"
+	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver/v4"
 	"github.com/schollz/progressbar/v3"
 )
 
-// KubectlStableURL URL of the text file used by kubernetes community
-// to hold the latest stable version of kubernetes released
-const KubectlStableURL = "https://storage.googleapis.com/kubernetes-release/release/stable.txt"
+func getKubeMirrorURL() (string, error) {
+	cfg := config.NewCfg()
+	return cfg.GetKubeMirrorURL()
+}
 
 // Downloder is a helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information
@@ -57,7 +59,16 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 // UpstreamStableVersion returns the latest version of kubernetes that upstream
 // considers stable
 func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
-	v, err := d.getContentsOfURL(KubectlStableURL)
+	baseURL, err := getKubeMirrorURL()
+	if err != nil {
+		return semver.Version{}, err
+	}
+	url, err := url.Parse(fmt.Sprintf("%s/release/stable.txt", baseURL))
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	v, err := d.getContentsOfURL(url.String())
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -106,8 +117,13 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 
 func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
+	baseURL, err := getKubeMirrorURL()
+	if err != nil {
+		return "", err
+	}
 	url, err := url.Parse(fmt.Sprintf(
-		"https://storage.googleapis.com/kubernetes-release/release/v%d.%d.%d/bin/%s/%s/kubectl%s",
+		"%s/release/v%d.%d.%d/bin/%s/%s/kubectl%s",
+		baseURL,
 		version.Major,
 		version.Minor,
 		version.Patch,

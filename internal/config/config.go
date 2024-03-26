@@ -30,6 +30,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
 	v.SetDefault("Timeout", 5)
+	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 
 	v.SetConfigType("toml")
 
@@ -44,6 +45,16 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	}
 
 	return v, nil
+}
+
+// GetKubeMirrorURL returns the URL of the kubernetes mirror
+func (c *Cfg) GetKubeMirrorURL() (string, error) {
+	v, err := c.Load()
+	if err != nil {
+		return "", err
+	}
+
+	return v.GetString("KubeMirrorUrl"), nil
 }
 
 func mergeConfig(v *viper.Viper, extraConfigPath string) error { //nolint: varnamelen
