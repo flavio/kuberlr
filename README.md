@@ -46,6 +46,8 @@ $ cp kuberlr /bin/
 $ ln -s ~/bin/kuberlr ~/bin/kubectl
 ```
 
+> **Note:** it's also possible to skip the creation of the symlink and use `kuberlr kubectl` instead.
+
 ## Usage
 
 Use the `kubectl` _"fake binary"_ as you usually do. Behind the scene
