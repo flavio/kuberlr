@@ -2,8 +2,6 @@ package downloader
 
 import (
 	"context"
-	"crypto/sha1" //nolint:gosec // sha1 is now we needed
-	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -83,11 +81,10 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	const maxNumTries = 3
 	const timeToSleepOnRetryPerIter = 10 // seconds
 
-	// - sha1 is available in range [1.0.0, 1.18)
-	// - sha256 is available from v1.16.0
-	// - sha512 is available from 1.12.0
-	isNew, parseErr := semver.ParseRange(">=1.12.0")
-	useSha512 := parseErr != nil || isNew(version)
+	hashing, hashingErr := NewHashing(version)
+	if hashingErr != nil {
+		return hashingErr
+	}
 
 	for iter := 1; iter <= maxNumTries; iter++ {
 		downloadURL, err := d.kubectlDownloadURL(version)
@@ -104,7 +101,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			}
 		}
 
-		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, useSha512, destination, 0755)
+		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0755)
 		if err == nil {
 			return nil
 		}
@@ -145,11 +142,8 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	return url.String(), nil
 }
 
-func (d *Downloder) download(desc string, urlToGet string, useSha512 bool, destination string, mode os.FileMode) error { //nolint: funlen
-	shaURLToGet := urlToGet + ".sha512"
-	if !useSha512 {
-		shaURLToGet = urlToGet + ".sha1"
-	}
+func (d *Downloder) download(desc string, urlToGet string, hashing *Hashing, destination string, mode os.FileMode) error { //nolint: funlen
+	shaURLToGet := urlToGet + hashing.Suffix
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
 		return fmt.Errorf("error while trying to get contents of %s: %w", shaURLToGet, err)
@@ -201,13 +195,8 @@ func (d *Downloder) download(desc string, urlToGet string, useSha512 bool, desti
 			fmt.Fprintln(os.Stderr, " done.")
 		}),
 	)
-	hasher := sha512.New()
-	if !useSha512 {
-		//nolint:gosec // sha1 is now we needed
-		hasher = sha1.New()
-	}
 
-	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
+	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hashing.Hasher), resp.Body)
 	if err != nil {
 		temporaryDestinationFile.Close()
 		return fmt.Errorf(
@@ -219,7 +208,7 @@ func (d *Downloder) download(desc string, urlToGet string, useSha512 bool, desti
 	// open file handler) does not conflict with the rename.
 	temporaryDestinationFile.Close()
 
-	shaActual := hex.EncodeToString(hasher.Sum(nil))
+	shaActual := hex.EncodeToString(hashing.Hasher.Sum(nil))
 	if shaExpected != shaActual {
 		return &common.ShaMismatchError{URL: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
