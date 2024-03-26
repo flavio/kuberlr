@@ -19,7 +19,7 @@ func main() {
 
 	binary := osexec.TrimExt(filepath.Base(os.Args[0]))
 	if strings.HasSuffix(binary, "kubectl") {
-		kubectlWrapperMode()
+		kubectlWrapperMode(os.Args[1:])
 	}
 	nativeMode()
 }
@@ -28,6 +28,17 @@ func nativeMode() {
 	cmd := newRootCmd()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
+	}
+}
+
+func NewKubectlWrapperCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:                "kubectl",
+		Short:              "Wrap and exec a suitable version kubectl command",
+		DisableFlagParsing: true,
+		Run: func(cmd *cobra.Command, args []string) {
+			kubectlWrapperMode(args)
+		},
 	}
 }
 
@@ -41,6 +52,7 @@ func newRootCmd() *cobra.Command {
 		NewVersionCmd(),
 		NewBinsCmd(),
 		NewGetCmd(),
+		NewKubectlWrapperCmd(),
 	)
 
 	flags.RegisterVerboseFlag(cmd.PersistentFlags())
@@ -48,7 +60,7 @@ func newRootCmd() *cobra.Command {
 	return cmd
 }
 
-func kubectlWrapperMode() {
+func kubectlWrapperMode(args []string) {
 	cfg := config.NewCfg()
 	//nolint: varnamelen
 	v, err := cfg.Load()
@@ -70,7 +82,7 @@ func kubectlWrapperMode() {
 		klog.Fatal(err)
 	}
 
-	childArgs := append([]string{kubectlBin}, os.Args[1:]...)
+	childArgs := append([]string{kubectlBin}, args...)
 	err = osexec.Exec(kubectlBin, childArgs, os.Environ())
 	klog.Fatal(err)
 }
