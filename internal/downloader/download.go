@@ -2,7 +2,6 @@ package downloader
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -82,6 +81,11 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 	const maxNumTries = 3
 	const timeToSleepOnRetryPerIter = 10 // seconds
 
+	hashing, hashingErr := NewHashing(version)
+	if hashingErr != nil {
+		return hashingErr
+	}
+
 	for iter := 1; iter <= maxNumTries; iter++ {
 		downloadURL, err := d.kubectlDownloadURL(version)
 		if err != nil {
@@ -97,7 +101,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			}
 		}
 
-		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, destination, 0755)
+		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0755)
 		if err == nil {
 			return nil
 		}
@@ -138,8 +142,8 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	return url.String(), nil
 }
 
-func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error { //nolint: funlen
-	shaURLToGet := urlToGet + ".sha256"
+func (d *Downloder) download(desc string, urlToGet string, hashing *Hashing, destination string, mode os.FileMode) error { //nolint: funlen
+	shaURLToGet := urlToGet + hashing.Suffix
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
 		return fmt.Errorf("error while trying to get contents of %s: %w", shaURLToGet, err)
@@ -191,9 +195,8 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 			fmt.Fprintln(os.Stderr, " done.")
 		}),
 	)
-	hasher := sha256.New()
 
-	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hasher), resp.Body)
+	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hashing.Hasher), resp.Body)
 	if err != nil {
 		temporaryDestinationFile.Close()
 		return fmt.Errorf(
@@ -205,7 +208,7 @@ func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMod
 	// open file handler) does not conflict with the rename.
 	temporaryDestinationFile.Close()
 
-	shaActual := hex.EncodeToString(hasher.Sum(nil))
+	shaActual := hex.EncodeToString(hashing.Hasher.Sum(nil))
 	if shaExpected != shaActual {
 		return &common.ShaMismatchError{URL: urlToGet, ShaExpected: shaExpected, ShaActual: shaActual}
 	}
