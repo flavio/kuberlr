@@ -1,11 +1,11 @@
-| Go Report                                                                                                                                | Unit tests                                                                          | License |
-|------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|---------|
+| Go Report                                                                                                                                | Unit tests                                                                                                                                                              | License                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [![Go Report Card](https://goreportcard.com/badge/github.com/flavio/kuberlr)](https://goreportcard.com/report/github.com/flavio/kuberlr) | [![tests](https://github.com/flavio/kuberlr/workflows/tests/badge.svg?branch=master)](https://github.com/flavio/kuberlr/actions?query=workflow%3Atests+branch%3Amaster) | [![License: Apache 2.0](https://img.shields.io/badge/License-Apache2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0) |
 
 > One kubectl to rule them all,  
 > one kubectl to find them,  
 > One kubectl to bring them all  
-> and in the darkness bind them.  
+> and in the darkness bind them.
 
 Managing different kubernetes clusters often requires to keep multiple versions
 of the kubectl available on the system, plus it poses the challenge to ensure
@@ -23,7 +23,7 @@ for all its components. This is [what is stated about kubectl](https://kubernete
 > kubectl is supported at 1.19, 1.18, and 1.17
 > ```
 
-kuberlr (*kube-ruler*) is a simple wrapper for kubectl. Its main purpose is to
+kuberlr (_kube-ruler_) is a simple wrapper for kubectl. Its main purpose is to
 make it easy to manage clusters running different versions of kubernetes.
 
 This is how kuberlr looks like in action:
@@ -48,7 +48,7 @@ $ ln -s ~/bin/kuberlr ~/bin/kubectl
 
 ## Usage
 
-Use the `kubectl` *"fake binary"* as you usually do. Behind the scene
+Use the `kubectl` _"fake binary"_ as you usually do. Behind the scene
 kuberlr will ensure a compatible version of `kubectl` is used.
 
 You can invoke the `kuberlr` binary in a direct fashion to access its
@@ -93,20 +93,20 @@ level (`~/.kuberlr/<GOOS>-<GOARCH>/`) and at system level (`/usr/bin`).
 The kubectl binaries installed at system level must respect one of these naming
 schemes in order to be used:
 
-  * `kubectl<major version>.<minor version>.<patch level>` (e.g.: `kubectl1.18.3`)
-  * `kubectl<major version>.<minor version>`: this would be handled as kubectl
-    version `<major version>.<minor version>.0`
+- `kubectl<major version>.<minor version>.<patch level>` (e.g.: `kubectl1.18.3`)
+- `kubectl<major version>.<minor version>`: this would be handled as kubectl
+  version `<major version>.<minor version>.0`
 
 ## Configuration
 
 The behaviour of kuberlr can be adjusted by creating a configuration file in
 one of these locations:
 
-  1. `/usr/etc/kuberlr.conf`: this is the location used by distributions like
-    openSUSE to handle the split between `/etc` and `/usr/etc`. You can find
-    more details [here](https://en.opensuse.org/openSUSE:Packaging_UsrEtc).
-  1. `/etc/kuberlr.conf`
-  1. `$HOME/.kuberlr/kuberlr.conf`
+1. `/usr/etc/kuberlr.conf`: this is the location used by distributions like
+   openSUSE to handle the split between `/etc` and `/usr/etc`. You can find
+   more details [here](https://en.opensuse.org/openSUSE:Packaging_UsrEtc).
+1. `/etc/kuberlr.conf`
+1. `$HOME/.kuberlr/kuberlr.conf`
 
 The configuration files are read in the order written above and merged together.
 Configuration files can override the values defined by the previous ones, or
@@ -123,5 +123,8 @@ SystemPath = "/opt/bin"
 
 # Timeout (sec) for requests made against the kubernetes API
 Timeout = 1
-```
 
+# URL of the upstream mirror where kubectl binaries can be downloaded from
+# Default "https://dl.k8s.io"
+KubeMirrorUrl = "https://dl.k8s.io"
+```

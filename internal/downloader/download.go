@@ -23,28 +23,14 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-// KubectlStableURL URL of the text file used by kubernetes community
-// to hold the latest stable version of kubernetes released
-const KubectlStableURL = "release/stable.txt"
+func getKubeMirrorURL() (string, error) {
+	cfg := config.NewCfg()
+	return cfg.GetKubeMirrorURL()
+}
 
 // Downloder is a helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information
 type Downloder struct {
-}
-
-func getKbReleaseURL(path string) (string, error) {
-	cfg := config.NewCfg()
-	v, err := cfg.Load()
-	if err != nil {
-		return "", err
-	}
-
-	url, err := url.Parse(fmt.Sprintf("%s/%s", v.GetString("KbReleaseUrl"), path))
-	if err != nil {
-		return "", err
-	}
-
-	return url.String(), nil
 }
 
 func (d *Downloder) getContentsOfURL(url string) (string, error) {
@@ -73,11 +59,16 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 // UpstreamStableVersion returns the latest version of kubernetes that upstream
 // considers stable
 func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
-	url, err := getKbReleaseURL(KubectlStableURL)
+	baseURL, err := getKubeMirrorURL()
 	if err != nil {
 		return semver.Version{}, err
 	}
-	v, err := d.getContentsOfURL(url)
+	url, err := url.Parse(fmt.Sprintf("%s/release/stable.txt", baseURL))
+	if err != nil {
+		return semver.Version{}, err
+	}
+
+	v, err := d.getContentsOfURL(url.String())
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -126,8 +117,13 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 
 func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	// Example: https://storage.googleapis.com/kubernetes-release/release/v1.18.0/bin/linux/amd64/kubectlI
-	url, err := getKbReleaseURL(fmt.Sprintf(
-		"release/v%d.%d.%d/bin/%s/%s/kubectl%s",
+	baseURL, err := getKubeMirrorURL()
+	if err != nil {
+		return "", err
+	}
+	url, err := url.Parse(fmt.Sprintf(
+		"%s/release/v%d.%d.%d/bin/%s/%s/kubectl%s",
+		baseURL,
 		version.Major,
 		version.Minor,
 		version.Patch,
@@ -139,7 +135,7 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 		return "", err
 	}
 
-	return url, nil
+	return url.String(), nil
 }
 
 func (d *Downloder) download(desc, urlToGet, destination string, mode os.FileMode) error { //nolint: funlen

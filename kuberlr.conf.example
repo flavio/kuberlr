@@ -9,3 +9,8 @@ SystemPath = "/usr/bin"
 # Timeout (sec) for requests made against the kubernetes API
 # Default 5 seconds
 Timeout = 5
+
+# URL of the upstream mirror where kubectl binaries can be downloaded from
+# Default "https://dl.k8s.io"
+KubeMirrorUrl = "https://dl.k8s.io"
+
