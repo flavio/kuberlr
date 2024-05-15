@@ -12,5 +12,6 @@ import (
 var configPaths = []string{
 	"/usr/etc/",
 	"/etc/",
+	ThisExecutableDir(),
 	filepath.Join(common.HomeDir(), ".kuberlr"),
 }
