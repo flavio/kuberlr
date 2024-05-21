@@ -82,7 +82,7 @@ func TestEnsureCompatibleKubectlAvailableLocalBinaryFound(t *testing.T) {
 	expectedPath := "/tmp/kubectl-1.9.0"
 
 	finderMock := mockFinder{}
-	finderMock.findCompatibleKubectl = func(v semver.Version) (KubectlBinary, error) {
+	finderMock.findCompatibleKubectl = func(_ semver.Version) (KubectlBinary, error) {
 		return KubectlBinary{
 			Version: expectedVersion,
 			Path:    expectedPath,
@@ -106,7 +106,7 @@ func TestEnsureCompatibleKubectlAvailableLocalBinaryFound(t *testing.T) {
 // keep
 func TestEnsureCompatibleKubectlAvailableLocalBinaryNotFound(t *testing.T) {
 	finderMock := mockFinder{}
-	finderMock.findCompatibleKubectl = func(v semver.Version) (KubectlBinary, error) {
+	finderMock.findCompatibleKubectl = func(_ semver.Version) (KubectlBinary, error) {
 		return KubectlBinary{}, &common.NoVersionFoundError{}
 	}
 
@@ -203,7 +203,7 @@ func TestKubectlVersionToUseTimeoutAndNoKubectlAvailable(t *testing.T) {
 // keep
 func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries, expected KubectlBinary, downloader *mockDownloader) error {
 	apiMock := mockAPIServer{}
-	apiMock.version = func(timeout int64) (semver.Version, error) {
+	apiMock.version = func(_ int64) (semver.Version, error) {
 		return semver.Version{}, &mockTimeoutError{}
 	}
 

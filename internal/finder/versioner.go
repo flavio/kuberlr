@@ -47,6 +47,12 @@ func NewVersioner(f iFinder) *Versioner {
 	}
 }
 
+const (
+	_ = iota
+	VerbosityOne
+	VerbosityTwo
+)
+
 // KubectlVersionToUse returns the kubectl version to be used to interact with
 // the remote server. The method takes into account different failure scenarios
 // and acts accordingly.
@@ -56,15 +62,15 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		if isUnreachable(err) {
 			// the remote server is unreachable, let's get
 			// the latest version of kubectl that is available on the system
-			klog.V(2).Info("Remote kubernetes server unreachable")
+			klog.V(VerbosityTwo).Info("Remote kubernetes server unreachable")
 		} else {
-			klog.V(1).Info(err)
+			klog.V(VerbosityOne).Info(err)
 		}
 		kubectl, internalErr := v.kFinder.MostRecentKubectlAvailable()
 		if internalErr == nil {
 			return kubectl.Version, nil
 		} else if common.IsNoVersionFound(internalErr) {
-			klog.V(2).Info("No local kubectl binary found, fetching latest stable release version")
+			klog.V(VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
 			return v.downloader.UpstreamStableVersion()
 		}
 	}
