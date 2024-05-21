@@ -23,7 +23,7 @@ func NewGetCmd() *cobra.Command {
   
   Versions can be specified with, or without the 'v' prefix:
   $ kuberlr get v1.19.1`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			version, err := semver.ParseTolerant(args[0])
 			if err != nil {
 				return fmt.Errorf("invalid version: %w", err)

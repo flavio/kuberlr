@@ -67,7 +67,7 @@ func createFakeKubectlBinaries(bins KubectlBinaries) error {
 		_, err := os.Stat(dir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(dir, 0755)
+				err = os.MkdirAll(dir, 0755) //nolint: mnd
 				if err != nil {
 					return err
 				}

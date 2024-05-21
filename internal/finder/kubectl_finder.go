@@ -189,6 +189,7 @@ func lowerBoundVersion(v semver.Version) semver.Version {
 }
 
 func upperBoundVersion(v semver.Version) semver.Version {
+	//nolint: mnd
 	return semver.Version{
 		Major: v.Major,
 		Minor: v.Minor + 2,

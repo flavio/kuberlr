@@ -27,7 +27,7 @@ func NewBinsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "bins",
 		Short: "Print information about the kubectl binaries found",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			kubectlFinder := finder.NewKubectlFinder("", "")
 			systemBins, err := kubectlFinder.SystemKubectlBinaries()
 

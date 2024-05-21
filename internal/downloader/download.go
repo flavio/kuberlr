@@ -62,7 +62,7 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 	if err != nil {
 		return semver.Version{}, err
 	}
-	url, err := url.Parse(fmt.Sprintf("%s/release/stable.txt", baseURL))
+	url, err := url.Parse(baseURL + "/release/stable.txt")
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -101,6 +101,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			}
 		}
 
+		//nolint: mnd
 		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0755)
 		if err == nil {
 			return nil
@@ -188,8 +189,8 @@ func (d *Downloder) download(desc string, urlToGet string, hashing *Hashing, des
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(40),
-		progressbar.OptionThrottle(10*time.Millisecond),
+		progressbar.OptionSetWidth(40),                  //nolint: mnd
+		progressbar.OptionThrottle(10*time.Millisecond), //nolint: mnd
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
 			fmt.Fprintln(os.Stderr, " done.")

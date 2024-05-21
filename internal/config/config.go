@@ -9,6 +9,8 @@ import (
 	"github.com/flavio/kuberlr/internal/common"
 )
 
+const DefaultTimeout = 5
+
 // Cfg is used to retrieve the configuration of kuberlr
 type Cfg struct {
 	Paths []string
@@ -29,7 +31,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
-	v.SetDefault("Timeout", 5)
+	v.SetDefault("Timeout", DefaultTimeout)
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 
 	v.SetConfigType("toml")
