@@ -48,6 +48,17 @@ KUBERLR_DIRS = cmd pkg internal
 # go source files, ignore vendor directory
 KUBERLR_SRCS = $(shell find $(KUBERLR_DIRS) -type f -name '*.go')
 
+# Define target platforms, image builder and the fully qualified image name.
+TARGET_PLATFORMS ?= linux/amd64,linux/arm64,linux/s390x
+
+RUNNER := docker
+IMAGE_BUILDER := $(RUNNER) buildx
+MACHINE := rancher
+
+REPO ?= flavio
+IMAGE = $(REPO)/kuberlr:$(TAG)
+BUILD_ACTION = --load
+
 .PHONY: all
 all: install
 
@@ -110,3 +121,18 @@ test-unit-coverage: test-unit
 .PHONY: test-bench
 test-bench:
 	$(GO) test $(GOMODFLAG) -bench=. $(PROJECT_PATH)/{cmd,pkg,internal}/...
+
+buildx-machine: ## create rancher dockerbuildx machine targeting platform defined by DEFAULT_PLATFORMS.
+	@docker buildx ls | grep $(MACHINE) || \
+		docker buildx create --name=$(MACHINE) --platform=$(TARGET_PLATFORMS)
+
+image-build: buildx-machine ## build (and load) the container image targeting the current platform.
+	$(IMAGE_BUILDER) build -f package/Dockerfile \
+		--progress plain --no-cache \
+		--builder $(MACHINE) $(IMAGE_ARGS) \
+		--build-arg PROJECT_PATH=$(PROJECT_PATH) \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg BUILD_DATE=$(BUILD_DATE) \
+		--build-arg TAG=$(TAG) \
+		-t "$(IMAGE)" $(BUILD_ACTION) .
+	@echo "Built $(IMAGE)"
