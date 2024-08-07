@@ -50,6 +50,7 @@ RUN useradd -u 1000 -U -m kuberlr \
     && echo '. /etc/profile.d/bash_completion.sh' >> /chroot/home/kuberlr/.bashrc \
     && echo 'alias k="kubectl"' >> /chroot/home/kuberlr/.bashrc \
     && echo 'alias ks="kubectl -n kube-system"' >> /chroot/home/kuberlr/.bashrc \
+    && echo 'source <(kuberlr completion bash)' >> /chroot/home/kuberlr/.bashrc \
     && echo 'source <(kubectl completion bash)' >> /chroot/home/kuberlr/.bashrc \
     && echo 'LANG=en_US.UTF-8' >> /chroot/home/kuberlr/.bashrc \
     && echo 'PS1="> "' >> /chroot/home/kuberlr/.bashrc \
