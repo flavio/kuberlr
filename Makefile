@@ -53,7 +53,7 @@ TARGET_PLATFORMS ?= linux/amd64,linux/arm64,linux/s390x
 
 RUNNER := docker
 IMAGE_BUILDER := $(RUNNER) buildx
-MACHINE := rancher
+MACHINE := kwctl
 
 REPO ?= flavio
 IMAGE = $(REPO)/kuberlr:$(TAG)
