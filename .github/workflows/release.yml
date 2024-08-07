@@ -13,6 +13,7 @@ jobs:
       packages: write
       id-token: write
       contents: write
+      attestations: write
 
     steps:
       - name: Checkout
@@ -66,5 +67,12 @@ jobs:
             TAG=${{ github.ref_name	}}
           platforms: "linux/amd64,linux/arm64,linux/s390x"
           push: true
+          provenance: true
           tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build-push.outputs.digest }}
+          push-to-registry: true
