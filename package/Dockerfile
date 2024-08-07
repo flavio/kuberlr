@@ -28,6 +28,13 @@ RUN xx-verify --static ./bin/kuberlr
 
 FROM registry.suse.com/bci/bci-base:${BCI_VERSION} AS zypper
 
+# Seed the skel dir with bash completion for kuberlr and kubectl
+# Now when the user is created in later steps these are included.
+COPY --from=build /app/bin/kuberlr /tmp/kuberlr
+RUN mkdir -p /usr/etc/skel && ln -s /tmp/kuberlr /tmp/kubectl && \
+    /tmp/kuberlr completion bash > /usr/etc/skel/.kuberlr_bash_completion && \
+    /tmp/kubectl completion bash > /usr/etc/skel/.kubectl_bash_completion
+
 RUN mkdir /chroot
 COPY --from=final / /chroot/
 
@@ -47,13 +54,13 @@ RUN useradd -u 1000 -U -m kuberlr \
     && cp /etc/passwd /chroot/etc/passwd \
     && cp /etc/group /chroot/etc/group \
     && cp -r /home/kuberlr /chroot/home/kuberlr \
+    && echo 'LANG=en_US.UTF-8' >> /chroot/home/kuberlr/.bashrc \
+    && echo 'PS1="> "' >> /chroot/home/kuberlr/.bashrc \
     && echo '. /etc/profile.d/bash_completion.sh' >> /chroot/home/kuberlr/.bashrc \
     && echo 'alias k="kubectl"' >> /chroot/home/kuberlr/.bashrc \
     && echo 'alias ks="kubectl -n kube-system"' >> /chroot/home/kuberlr/.bashrc \
-    && echo 'source <(kuberlr completion bash)' >> /chroot/home/kuberlr/.bashrc \
-    && echo 'source <(kubectl completion bash)' >> /chroot/home/kuberlr/.bashrc \
-    && echo 'LANG=en_US.UTF-8' >> /chroot/home/kuberlr/.bashrc \
-    && echo 'PS1="> "' >> /chroot/home/kuberlr/.bashrc \
+    && echo 'source ~/.kuberlr_bash_completion' >> /chroot/home/kuberlr/.bashrc \
+    && echo 'source ~/.kubectl_bash_completion' >> /chroot/home/kuberlr/.bashrc \
     && mkdir /chroot/home/kuberlr/.kube \
     && mkdir /chroot/home/kuberlr/.kuberlr \
     && touch /chroot/home/kuberlr/.kuberlr/kuberlr.conf \
