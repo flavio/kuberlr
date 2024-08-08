@@ -1,4 +1,4 @@
-name: goreleaser
+name: Release Tag (goreleaser and container image)
 
 on:
   push:
@@ -13,22 +13,66 @@ jobs:
       packages: write
       id-token: write
       contents: write
+      attestations: write
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: 1.22.x
-      - uses: sigstore/cosign-installer@v3
+      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6.0.0
+        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
         with:
           distribution: goreleaser
           version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  docker-image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          fetch-depth: 0
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+      - name: Log in to the Container registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          REGISTRY: ${{ vars.registry || 'ghcr.io' }}
+          username: ${{ vars.username || github.actor }}
+          password: ${{ secrets.IMAGE_REPO_PASSWORD || secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
+      - name: Build and push
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+        id: build-push
+        with:
+          context: .
+          file: package/Dockerfile
+          build-args: |
+            PROJECT_PATH=github.com/${{ github.repository }}
+            VERSION=${{ github.ref_name	}}
+            TAG=${{ github.ref_name	}}
+          platforms: "linux/amd64,linux/arm64,linux/s390x"
+          push: true
+          provenance: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@210c1913531870065f03ce1f9440dd87bc0938cd # v1.4.0
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.build-push.outputs.digest }}
+          push-to-registry: true

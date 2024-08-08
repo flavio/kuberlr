@@ -1,0 +1,6 @@
+.idea/
+.github/
+dist/
+package/
+coverage.out
+.dockerenv
