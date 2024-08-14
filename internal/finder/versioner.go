@@ -57,6 +57,21 @@ const (
 // the remote server. The method takes into account different failure scenarios
 // and acts accordingly.
 func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
+	// Using kubectl exec plugin, the Kubernetes version client will systematically
+	// execute kubectl to obtain credentials to the cluster.
+	// Having `kubectl` in the `PATH` substitute by kuberlr, this causes infinite recursion loop.
+	// kuberlr/kubectl calls Kubernetes client go that in its tunrn calls kuberlr/kubectl to authenticate to the server.
+	// To avoid this, we set an environment variable to signal that we are currently resolving the kubernetes version.
+	const protectVersionRecusrionEnvName = "KUBERLR_RESOLVING_VERSION"
+	_, ok := os.LookupEnv(protectVersionRecusrionEnvName)
+	if ok {
+		klog.V(VerbosityTwo).Info("Currently resolving the kubernetes version. Avoid infinite recursion loop and returning the latest stable version")
+		return v.downloader.UpstreamStableVersion()
+	} else {
+		defer os.Unsetenv(protectVersionRecusrionEnvName)
+	}
+	os.Setenv(protectVersionRecusrionEnvName, "1")
+
 	version, err := v.apiServer.Version(timeout)
 	if err != nil {
 		if isUnreachable(err) {
