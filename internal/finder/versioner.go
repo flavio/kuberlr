@@ -69,7 +69,7 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 
 	_, recursiveInvocationDetected := os.LookupEnv(PreventRecursiveInvocationEnvName)
 	if recursiveInvocationDetected {
-		klog.V(VerbosityTwo).Info("clint-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
+		klog.V(VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
 		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 
