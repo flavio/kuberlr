@@ -53,24 +53,28 @@ const (
 	VerbosityTwo
 )
 
+const PreventRecursiveInvocationEnvName = "KUBERLR_RESOLVING_VERSION"
+
 // KubectlVersionToUse returns the kubectl version to be used to interact with
 // the remote server. The method takes into account different failure scenarios
 // and acts accordingly.
 func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
-	// Using kubectl exec plugin, the Kubernetes version client will systematically
-	// execute kubectl to obtain credentials to the cluster.
-	// Having `kubectl` in the `PATH` substitute by kuberlr, this causes infinite recursion loop.
-	// kuberlr/kubectl calls Kubernetes client go that in its tunrn calls kuberlr/kubectl to authenticate to the server.
+	// We use Kubernetes client-go to interact with the remote server to obtain its version.
+	// Depending on the cluster configuration, the client-go library might shell out and invoke
+	// the kubectl binary to authenticate to the server.
+	// Since the kubectl binary is an alias to kuberlr, we can enter a recursion loop
+	// where kuberlr calls kubectl that in turn calls kuberlr again.
+	//
 	// To avoid this, we set an environment variable to signal that we are currently resolving the kubernetes version.
-	const protectVersionRecusrionEnvName = "KUBERLR_RESOLVING_VERSION"
-	_, ok := os.LookupEnv(protectVersionRecusrionEnvName)
-	if ok {
-		klog.V(VerbosityTwo).Info("Currently resolving the kubernetes version. Avoid infinite recursion loop and returning the latest stable version")
-		return v.downloader.UpstreamStableVersion()
-	} else {
-		defer os.Unsetenv(protectVersionRecusrionEnvName)
+
+	_, recursiveInvocationDetected := os.LookupEnv(PreventRecursiveInvocationEnvName)
+	if recursiveInvocationDetected {
+		klog.V(VerbosityTwo).Info("clint-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
+		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
-	os.Setenv(protectVersionRecusrionEnvName, "1")
+
+	os.Setenv(PreventRecursiveInvocationEnvName, "1")
+	defer os.Unsetenv(PreventRecursiveInvocationEnvName)
 
 	version, err := v.apiServer.Version(timeout)
 	if err != nil {
@@ -81,15 +85,21 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		} else {
 			klog.V(VerbosityOne).Info(err)
 		}
-		kubectl, internalErr := v.kFinder.MostRecentKubectlAvailable()
-		if internalErr == nil {
-			return kubectl.Version, nil
-		} else if common.IsNoVersionFound(internalErr) {
-			klog.V(VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
-			return v.downloader.UpstreamStableVersion()
-		}
+		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 	return version, err
+}
+
+// mostRecentKubectlVersionAvailableOrLatestFromUpstream returns the most recent version of kubectl
+// available on the system. If no kubectl binary is found, it will download the
+// latest stable version from the upstream mirror
+func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (semver.Version, error) {
+	if kubectl, err := v.kFinder.MostRecentKubectlAvailable(); err == nil {
+		return kubectl.Version, nil
+	}
+
+	klog.V(VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
+	return v.downloader.UpstreamStableVersion()
 }
 
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
