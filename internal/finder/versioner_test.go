@@ -2,6 +2,7 @@ package finder
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -242,4 +243,56 @@ func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries
 	}
 
 	return nil
+}
+
+// keep
+func TestKubectlVersionToUseSetsInfiniteRecursionPreventionEnvironmentVariable(t *testing.T) {
+	apiServerVersion := false
+	versioner := Versioner{
+		apiServer: &mockAPIServer{
+			version: func(_ int64) (semver.Version, error) {
+				_, hasRecursionPreventionEnvironmentVariable := os.LookupEnv(PreventRecursiveInvocationEnvName)
+				if !hasRecursionPreventionEnvironmentVariable {
+					t.Errorf("Expected recursion prevention environment variable %s to be set when getting the version from kube API", PreventRecursiveInvocationEnvName)
+				}
+				apiServerVersion = true
+				return semver.Version{}, nil
+			},
+		},
+	}
+	_, err := versioner.KubectlVersionToUse(1)
+	if err != nil {
+		t.Errorf("Unexpected error %v", err)
+	}
+	if !apiServerVersion {
+		t.Error("Expected api server version to be called")
+	}
+	_, hasRecursionPreventionEnvironmentVariable := os.LookupEnv(PreventRecursiveInvocationEnvName)
+	if hasRecursionPreventionEnvironmentVariable {
+		t.Errorf("Expected recursion prevention environment variable %s to be removed after version is retrieved", PreventRecursiveInvocationEnvName)
+	}
+}
+
+// keep
+func TestKubectlVersionToUseUsesLatestOrLatestVersionAvailableWhenRecursionIsPrevented(t *testing.T) {
+	t.Setenv(PreventRecursiveInvocationEnvName, "1")
+	versioner := Versioner{
+		apiServer: &mockAPIServer{
+			version: func(_ int64) (semver.Version, error) {
+				t.Errorf("Expected api server version to not be called when recursion is prevented")
+				return semver.Version{}, nil
+			},
+		},
+		kFinder: &mockFinder{
+			mostRecentKubectlAvailable: func() (KubectlBinary, error) {
+				return KubectlBinary{
+					Version: semver.MustParse("1.2.3"),
+				}, nil
+			},
+		},
+	}
+	_, err := versioner.KubectlVersionToUse(1)
+	if err != nil {
+		t.Errorf("Unexpected error %v", err)
+	}
 }
