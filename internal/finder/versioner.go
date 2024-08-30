@@ -28,7 +28,7 @@ type iFinder interface {
 	AllKubectlBinaries(reverseSort bool) KubectlBinaries
 }
 
-// Versioner is used to manage the local kubectl binaries used by kuberlr
+// Versioner is used to manage the local kubectl binaries used by kuberlr.
 type Versioner struct {
 	kFinder                           iFinder
 	downloader                        downloadHelper
@@ -36,7 +36,7 @@ type Versioner struct {
 	preventRecursiveInvocationEnvName string
 }
 
-// NewVersioner is an helper function that creates a new Versioner instance
+// NewVersioner is an helper function that creates a new Versioner instance.
 func NewVersioner(f iFinder) *Versioner {
 	return &Versioner{
 		kFinder:                           f,
@@ -91,7 +91,7 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 
 // mostRecentKubectlVersionAvailableOrLatestFromUpstream returns the most recent version of kubectl
 // available on the system. If no kubectl binary is found, it will download the
-// latest stable version from the upstream mirror
+// latest stable version from the upstream mirror.
 func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (semver.Version, error) {
 	bins := v.kFinder.AllKubectlBinaries(true)
 	if kubectl, err := mostRecentKubectlAvailable(bins); err == nil {
@@ -104,7 +104,7 @@ func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (sem
 
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
-// binary
+// binary.
 func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, allowDownload bool) (string, error) {
 	bins := v.kFinder.AllKubectlBinaries(true)
 	kubectl, err := findCompatibleKubectl(version, bins)
@@ -136,8 +136,8 @@ func isUnreachable(err error) bool {
 }
 
 // findCompatibleKubectl returns a kubectl binary compatible with the
-// version given via the `requestedVersion` parameter
-// Important: the `bins` parameter must be sorted in descending order
+// version given via the `requestedVersion` parameter.
+// Important: the `bins` parameter must be sorted in descending order.
 func findCompatibleKubectl(requestedVersion semver.Version, bins KubectlBinaries) (KubectlBinary, error) {
 	if len(bins) == 0 {
 		return KubectlBinary{}, &common.NoVersionFoundError{}
@@ -163,7 +163,7 @@ func findCompatibleKubectl(requestedVersion semver.Version, bins KubectlBinaries
 
 // mostRecentKubectlAvailable returns the most recent version of
 // kubectl available on the system. It could be something downloaded
-// by kuberlr or something already available on the system
+// by kuberlr or something already available on the system.
 func mostRecentKubectlAvailable(bins KubectlBinaries) (KubectlBinary, error) {
 	if len(bins) == 0 {
 		return KubectlBinary{}, &common.NoVersionFoundError{}
@@ -184,7 +184,7 @@ func lowerBoundVersion(v semver.Version) semver.Version {
 }
 
 func upperBoundVersion(v semver.Version) semver.Version {
-	//nolint: mnd
+	//nolint: mnd // we are setting the patch version to 0
 	return semver.Version{
 		Major: v.Major,
 		Minor: v.Minor + 2,

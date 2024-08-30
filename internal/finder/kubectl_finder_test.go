@@ -23,7 +23,6 @@ func setupFilesystemTest() (localCacheTestData, error) {
 		return localCacheTestData{}, err
 	}
 
-	//nolint: varnamelen
 	td := localCacheTestData{
 		FakeHome:       fakeHome,
 		FakeSysBinPath: fakeSysBin,
@@ -46,7 +45,6 @@ func teardownFilesystemTest(td localCacheTestData) error {
 }
 
 func TestAllKubectlBinaries(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
@@ -73,7 +71,7 @@ func TestAllKubectlBinaries(t *testing.T) {
 		t.Error(err)
 	}
 
-	//nolint: gocritic
+	//nolint: gocritic // append returns a different array on purpose, we're joining two arrays
 	expected := append(systemBins, localBins...)
 	actual := td.Finder.AllKubectlBinaries(true)
 
@@ -92,7 +90,6 @@ func TestAllKubectlBinaries(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)
@@ -113,7 +110,6 @@ func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setupFilesystemTest()
 	if err != nil {
 		t.Errorf("Unexpeted failure: %v", err)

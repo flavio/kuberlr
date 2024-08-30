@@ -45,7 +45,6 @@ func writeConfig(path, data string) error {
 }
 
 func TestOnlySystemConfigExists(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -71,7 +70,6 @@ func TestOnlySystemConfigExists(t *testing.T) {
 }
 
 func TestHomeConfigOverridesSystemOne(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -101,7 +99,6 @@ func TestHomeConfigOverridesSystemOne(t *testing.T) {
 }
 
 func TestMergeConfigs(t *testing.T) {
-	//nolint: varnamelen
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -138,7 +135,6 @@ AllowDownload = true
 		Paths: []string{td.FakeUsrEtc, td.FakeEtc, td.FakeHome},
 	}
 
-	//nolint: varnamelen
 	v, err := c.Load()
 	if err != nil {
 		t.Errorf("Unexpected error loading config: %v", err)

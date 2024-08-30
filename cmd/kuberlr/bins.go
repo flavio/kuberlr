@@ -21,9 +21,9 @@ func printBinTable(bins finder.KubectlBinaries) {
 	tableWriter.Render()
 }
 
-// NewBinsCmd creates a new `kuberlr bins` cobra command
+// NewBinsCmd creates a new `kuberlr bins` cobra command.
 func NewBinsCmd() *cobra.Command {
-	//nolint: forbidigo
+	//nolint: forbidigo // it's fine to print to stdout
 	return &cobra.Command{
 		Use:   "bins",
 		Short: "Print information about the kubectl binaries found",
@@ -32,27 +32,29 @@ func NewBinsCmd() *cobra.Command {
 			systemBins, err := kubectlFinder.SystemKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("system-wide kubectl binaries"))
-			//nolint: gocritic
-			if err != nil {
-				fmt.Printf("Error retrieving binaries: %v\n", err)
-			} else if len(systemBins) == 0 {
-				fmt.Println("No binaries found.")
-			} else {
-				printBinTable(systemBins)
-			}
+			printBinaries(systemBins, err)
 
 			fmt.Printf("\n\n")
 			localBins, err := kubectlFinder.LocalKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("local kubectl binaries"))
-			//nolint: gocritic
-			if err != nil {
-				fmt.Printf("Error retrieving binaries: %v\n", err)
-			} else if len(localBins) == 0 {
-				fmt.Println("No binaries found.")
-			} else {
-				printBinTable(localBins)
-			}
+			printBinaries(localBins, err)
 		},
 	}
+}
+
+func printBinaries(bins finder.KubectlBinaries, err error) {
+	if err != nil {
+		//nolint: forbidigo // it's fine to print to stdout
+		fmt.Printf("Error retrieving binaries: %v\n", err)
+		return
+	}
+
+	if len(bins) == 0 {
+		//nolint: forbidigo // it's fine to print to stdout
+		fmt.Println("No binaries found.")
+		return
+	}
+
+	printBinTable(bins)
 }

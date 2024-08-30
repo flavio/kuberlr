@@ -11,23 +11,22 @@ import (
 
 const DefaultTimeout = 5
 
-// Cfg is used to retrieve the configuration of kuberlr
+// Cfg is used to retrieve the configuration of kuberlr.
 type Cfg struct {
 	Paths []string
 }
 
 // NewCfg returns a new Cfg object that is pre-configured
 // to look for the configuration files in the right set of
-// directories
+// directories.
 func NewCfg() *Cfg {
 	return &Cfg{
 		Paths: configPaths,
 	}
 }
 
-// Load reads the configuration files from disks and merges them
+// Load reads the configuration files from disks and merges them.
 func (c *Cfg) Load() (*viper.Viper, error) {
-	//nolint: varnamelen
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
@@ -49,7 +48,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	return v, nil
 }
 
-// GetKubeMirrorURL returns the URL of the kubernetes mirror
+// GetKubeMirrorURL returns the URL of the kubernetes mirror.
 func (c *Cfg) GetKubeMirrorURL() (string, error) {
 	v, err := c.Load()
 	if err != nil {
@@ -59,7 +58,7 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 	return v.GetString("KubeMirrorUrl"), nil
 }
 
-func mergeConfig(v *viper.Viper, extraConfigPath string) error { //nolint: varnamelen
+func mergeConfig(v *viper.Viper, extraConfigPath string) error {
 	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
 
 	_, err := os.Stat(cfgFile)

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewGetCmd creates a new `kuberlr get` cobra command
+// NewGetCmd creates a new `kuberlr get` cobra command.
 func NewGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:          "get [version to get]",

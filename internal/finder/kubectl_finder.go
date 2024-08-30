@@ -13,13 +13,13 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// KubectlFinder holds data about where to look the kubectl binaries
+// KubectlFinder holds data about where to look the kubectl binaries.
 type KubectlFinder struct {
 	localBinaryPath string
 	sysBinaryPath   string
 }
 
-// NewKubectlFinder returns a properly initialized KubectlFinder object
+// NewKubectlFinder returns a properly initialized KubectlFinder object.
 func NewKubectlFinder(local, sys string) *KubectlFinder {
 	if local == "" {
 		local = common.LocalDownloadDir()
@@ -35,19 +35,19 @@ func NewKubectlFinder(local, sys string) *KubectlFinder {
 }
 
 // SystemKubectlBinaries returns the list of kubectl binaries that are
-// available to all the users of the system
+// available to all the users of the system.
 func (f *KubectlFinder) SystemKubectlBinaries() (KubectlBinaries, error) {
 	return findKubectlBinaries(f.sysBinaryPath)
 }
 
 // LocalKubectlBinaries returns the list of kubectl binaries that are
-// available only to the user currently running kuberlr
+// available only to the user currently running kuberlr.
 func (f *KubectlFinder) LocalKubectlBinaries() (KubectlBinaries, error) {
 	return findKubectlBinaries(f.localBinaryPath)
 }
 
 // AllKubectlBinaries returns all the kubectl binaries available to the
-// user running kuberlr
+// user running kuberlr.
 func (f *KubectlFinder) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
 	var bins KubectlBinaries
 

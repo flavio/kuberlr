@@ -4,11 +4,11 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// KubeAPI helps interactions with kubernetes API server
+// KubeAPI helps interactions with kubernetes API server.
 type KubeAPI struct {
 }
 
-// Version returns the version of the remote kubernetes API server
+// Version returns the version of the remote kubernetes API server.
 func (k *KubeAPI) Version(timeout int64) (semver.Version, error) {
 	client, err := createKubeClient(timeout)
 	if err != nil {

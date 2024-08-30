@@ -11,6 +11,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type mockTimeoutError struct {
@@ -25,7 +26,6 @@ func (e *mockTimeoutError) Timeout() bool {
 	return true
 }
 
-// keep
 func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *testing.T) {
 	tests := []struct {
 		name                     string
@@ -84,11 +84,9 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
 
 			downloaderMock := NewMockdownloadHelper(t)
-			if !tt.expectedToMakeDownloads || !tt.downloadAllowed {
-				// No expectation on downloader, as it should not be called
-			} else {
+			if tt.expectedToMakeDownloads && tt.downloadAllowed {
 				downloaderMock.EXPECT().GetKubectlBinary(requestedVersion, mock.AnythingOfType("string")).RunAndReturn(
-					func(version semver.Version, destination string) error {
+					func(_ semver.Version, destination string) error {
 						assert.Contains(t, destination, common.LocalDownloadDir())
 						return nil
 					},
@@ -105,13 +103,12 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			if tt.expectsError {
 				assert.Error(t, err)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
 }
 
-// keep
 func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing.T) {
 	// a special version used later to indicate that we will not query the latest
 	// upstream version
@@ -151,9 +148,7 @@ func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing
 			finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
 
 			downloaderMock := NewMockdownloadHelper(t)
-			if tt.latestUpstreamKubectlVersion.EQ(upstreamVersionDoNotQuery) {
-				// No expectation on downloader, as it should not be called
-			} else {
+			if !tt.latestUpstreamKubectlVersion.EQ(upstreamVersionDoNotQuery) {
 				downloaderMock.EXPECT().UpstreamStableVersion().Return(tt.latestUpstreamKubectlVersion, nil)
 			}
 
@@ -169,13 +164,12 @@ func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing
 			}
 
 			actual, err := versioner.KubectlVersionToUse(expectedTimeout)
-			assert.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, expectedVersion, actual, "got %s instead of %s", actual, expectedVersion)
 		})
 	}
 }
 
-// keep
 func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 	// a special version used later to indicate that we will not query the API
 	// server version
@@ -223,9 +217,6 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 			finderMock := NewMockiFinder(t)
 			if tt.recursionHappening {
 				finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
-			} else {
-				// No expectation set, as we should not query the local kubectl binaries
-				// but instead query the API server
 			}
 
 			// No expectation on downloader, as it should not be called
@@ -233,9 +224,7 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 
 			expectedTimeout := int64(1)
 			apiMock := NewMockkubeAPIHelper(t)
-			if tt.recursionHappening {
-				// No expectation on API server, as it should not be called
-			} else {
+			if !tt.recursionHappening {
 				apiMock.EXPECT().Version(expectedTimeout).Return(tt.kubeAPIServerVersion, nil)
 			}
 
@@ -247,7 +236,7 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 			}
 
 			actual, err := versioner.KubectlVersionToUse(expectedTimeout)
-			assert.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, expectedVersion, actual, "got %s instead of %s", actual, expectedVersion)
 		})
 	}
@@ -311,7 +300,6 @@ func TestFindCompatibleKubectl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			kubectlBins := KubectlBinaries{}
 			for _, version := range tt.kubectlAvailableVersions {
 				kubectlBins = append(kubectlBins, KubectlBinary{
@@ -326,13 +314,13 @@ func TestFindCompatibleKubectl(t *testing.T) {
 
 			actual, err := findCompatibleKubectl(tt.requestedVersion, kubectlBins)
 			if tt.expectedVersion.EQ(noVersionExpected) {
-				assert.NotNil(t, err)
-				is_no_version_found := func() bool {
+				assert.Error(t, err)
+				isNoVersionFound := func() bool {
 					return common.IsNoVersionFound(err)
 				}
-				assert.Condition(t, is_no_version_found)
+				assert.Condition(t, isNoVersionFound)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, expected, actual, "got %s instead of %s", actual, expected)
 			}
 		})
