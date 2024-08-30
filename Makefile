@@ -14,7 +14,7 @@ GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
 GO_VERSION_MIN := $(shell echo $(GO_VERSION) | cut -f2 -d'.')
 
 # golangci linter
-GOLANGCI_LINT_VER := v1.58.2
+GOLANGCI_LINT_VER := v1.60.3
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BINPATH)/$(GOLANGCI_LINT_BIN)
 
@@ -136,3 +136,6 @@ image-build: buildx-machine ## build (and load) the container image targeting th
 		--build-arg TAG=$(TAG) \
 		-t "$(IMAGE)" $(BUILD_ACTION) .
 	@echo "Built $(IMAGE)"
+
+generate-mocks:
+	mockery

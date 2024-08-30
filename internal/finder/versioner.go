@@ -2,6 +2,7 @@ package finder
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -24,26 +25,24 @@ type kubeAPIHelper interface {
 }
 
 type iFinder interface {
-	SystemKubectlBinaries() (KubectlBinaries, error)
-	LocalKubectlBinaries() (KubectlBinaries, error)
 	AllKubectlBinaries(reverseSort bool) KubectlBinaries
-	FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error)
-	MostRecentKubectlAvailable() (KubectlBinary, error)
 }
 
-// Versioner is used to manage the local kubectl binaries used by kuberlr
+// Versioner is used to manage the local kubectl binaries used by kuberlr.
 type Versioner struct {
-	kFinder    iFinder
-	downloader downloadHelper
-	apiServer  kubeAPIHelper
+	kFinder                           iFinder
+	downloader                        downloadHelper
+	apiServer                         kubeAPIHelper
+	preventRecursiveInvocationEnvName string
 }
 
-// NewVersioner is an helper function that creates a new Versioner instance
+// NewVersioner is an helper function that creates a new Versioner instance.
 func NewVersioner(f iFinder) *Versioner {
 	return &Versioner{
-		kFinder:    f,
-		downloader: &downloader.Downloder{},
-		apiServer:  &kubehelper.KubeAPI{},
+		kFinder:                           f,
+		downloader:                        &downloader.Downloder{},
+		apiServer:                         &kubehelper.KubeAPI{},
+		preventRecursiveInvocationEnvName: PreventRecursiveInvocationEnvName,
 	}
 }
 
@@ -67,14 +66,14 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 	//
 	// To avoid this, we set an environment variable to signal that we are currently resolving the kubernetes version.
 
-	_, recursiveInvocationDetected := os.LookupEnv(PreventRecursiveInvocationEnvName)
+	_, recursiveInvocationDetected := os.LookupEnv(v.preventRecursiveInvocationEnvName)
 	if recursiveInvocationDetected {
 		klog.V(VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
 		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 
-	os.Setenv(PreventRecursiveInvocationEnvName, "1")
-	defer os.Unsetenv(PreventRecursiveInvocationEnvName)
+	os.Setenv(v.preventRecursiveInvocationEnvName, "1")
+	defer os.Unsetenv(v.preventRecursiveInvocationEnvName)
 
 	version, err := v.apiServer.Version(timeout)
 	if err != nil {
@@ -92,9 +91,10 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 
 // mostRecentKubectlVersionAvailableOrLatestFromUpstream returns the most recent version of kubectl
 // available on the system. If no kubectl binary is found, it will download the
-// latest stable version from the upstream mirror
+// latest stable version from the upstream mirror.
 func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (semver.Version, error) {
-	if kubectl, err := v.kFinder.MostRecentKubectlAvailable(); err == nil {
+	bins := v.kFinder.AllKubectlBinaries(true)
+	if kubectl, err := mostRecentKubectlAvailable(bins); err == nil {
 		return kubectl.Version, nil
 	}
 
@@ -104,9 +104,10 @@ func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (sem
 
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
-// binary
+// binary.
 func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, allowDownload bool) (string, error) {
-	kubectl, err := v.kFinder.FindCompatibleKubectl(version)
+	bins := v.kFinder.AllKubectlBinaries(true)
+	kubectl, err := findCompatibleKubectl(version, bins)
 	if err == nil {
 		return kubectl.Path, nil
 	}
@@ -132,4 +133,61 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 func isUnreachable(err error) bool {
 	var e *url.Error
 	return os.IsTimeout(err) || errors.As(err, &e)
+}
+
+// findCompatibleKubectl returns a kubectl binary compatible with the
+// version given via the `requestedVersion` parameter.
+// Important: the `bins` parameter must be sorted in descending order.
+func findCompatibleKubectl(requestedVersion semver.Version, bins KubectlBinaries) (KubectlBinary, error) {
+	if len(bins) == 0 {
+		return KubectlBinary{}, &common.NoVersionFoundError{}
+	}
+
+	lowerBound := lowerBoundVersion(requestedVersion)
+	upperBound := upperBoundVersion(requestedVersion)
+	rangeRule := fmt.Sprintf(">=%s <%s", lowerBound.String(), upperBound.String())
+
+	validRange, err := semver.ParseRange(rangeRule)
+	if err != nil {
+		return KubectlBinary{}, err
+	}
+
+	for _, b := range bins {
+		if validRange(b.Version) {
+			return b, nil
+		}
+	}
+
+	return KubectlBinary{}, &common.NoVersionFoundError{}
+}
+
+// mostRecentKubectlAvailable returns the most recent version of
+// kubectl available on the system. It could be something downloaded
+// by kuberlr or something already available on the system.
+func mostRecentKubectlAvailable(bins KubectlBinaries) (KubectlBinary, error) {
+	if len(bins) == 0 {
+		return KubectlBinary{}, &common.NoVersionFoundError{}
+	}
+
+	return bins[0], nil
+}
+
+func lowerBoundVersion(v semver.Version) semver.Version {
+	res := v
+
+	res.Patch = 0
+	if v.Minor > 0 {
+		res.Minor = v.Minor - 1
+	}
+
+	return res
+}
+
+func upperBoundVersion(v semver.Version) semver.Version {
+	//nolint: mnd // we are setting the patch version to 0
+	return semver.Version{
+		Major: v.Major,
+		Minor: v.Minor + 2,
+		Patch: 0,
+	}
 }

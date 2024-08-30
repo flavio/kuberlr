@@ -28,7 +28,7 @@ func getKubeMirrorURL() (string, error) {
 }
 
 // Downloder is a helper class that is used to interact with the
-// kubernetes infrastructure holding released binaries and release information
+// kubernetes infrastructure holding released binaries and release information.
 type Downloder struct {
 }
 
@@ -56,7 +56,7 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 }
 
 // UpstreamStableVersion returns the latest version of kubernetes that upstream
-// considers stable
+// considers stable.
 func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 	baseURL, err := getKubeMirrorURL()
 	if err != nil {
@@ -75,7 +75,7 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 }
 
 // GetKubectlBinary downloads the kubectl binary identified by the given version
-// to the specified destination
+// to the specified destination.
 func (d *Downloder) GetKubectlBinary(version semver.Version, destination string) error {
 	var firstErr error
 	const maxNumTries = 3
@@ -101,7 +101,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			}
 		}
 
-		//nolint: mnd
+		//nolint: mnd // setting the mode to read/write/execute for owner only
 		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0755)
 		if err == nil {
 			return nil
@@ -143,7 +143,11 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	return url.String(), nil
 }
 
-func (d *Downloder) download(desc string, urlToGet string, hashing *Hashing, destination string, mode os.FileMode) error { //nolint: funlen
+func (d *Downloder) download(desc string,
+	urlToGet string,
+	hashing *Hashing,
+	destination string,
+	mode os.FileMode) error {
 	shaURLToGet := urlToGet + hashing.Suffix
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
@@ -189,8 +193,8 @@ func (d *Downloder) download(desc string, urlToGet string, hashing *Hashing, des
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(40),                  //nolint: mnd
-		progressbar.OptionThrottle(10*time.Millisecond), //nolint: mnd
+		progressbar.OptionSetWidth(40),                  //nolint: mnd // 40 is a good width
+		progressbar.OptionThrottle(10*time.Millisecond), //nolint: mnd // 10ms is a good throttle
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
 			fmt.Fprintln(os.Stderr, " done.")

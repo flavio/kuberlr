@@ -8,7 +8,7 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// Hashing contains the hashing details for the downloader
+// Hashing contains the hashing details for the downloader.
 type Hashing struct {
 	// Suffix of the file containing the hash
 	Suffix string
@@ -17,7 +17,7 @@ type Hashing struct {
 	Hasher hash.Hash
 }
 
-// NewHashing returns the hashing details for the downloader
+// NewHashing returns the hashing details for the downloader.
 //
 //nolint:gosec // sha1 is needed by old releases of kubectl
 func NewHashing(version semver.Version) (*Hashing, error) {

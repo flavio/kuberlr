@@ -6,18 +6,18 @@ import (
 	"github.com/blang/semver/v4"
 )
 
-// KubectlBinary describes a kubectl binary
+// KubectlBinary describes a kubectl binary.
 type KubectlBinary struct {
 	Path    string
 	Version semver.Version
 }
 
-// KubectlBinaries is a list of KubectlBinary objects
+// KubectlBinaries is a list of KubectlBinary objects.
 type KubectlBinaries []KubectlBinary
 
 // SortKubectlByVersion sorts a list of KubectlBinary objects using their version
 // attribute. By default objects are sorted ascendantly (from earlier to more
-// recent versions); this can be changed via the `reverse` parameter
+// recent versions); this can be changed via the `reverse` parameter.
 func SortKubectlByVersion(binaries KubectlBinaries, reverse bool) {
 	sort.Slice(binaries, func(i, j int) bool {
 		if reverse {

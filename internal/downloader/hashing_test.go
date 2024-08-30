@@ -2,7 +2,7 @@ package downloader
 
 import (
 	"bytes"
-	"crypto/sha1" //nolint:gosec // sha1 is needed by old releases of kubectl
+	"crypto/sha1"
 	"crypto/sha512"
 	"testing"
 
@@ -22,7 +22,7 @@ func TestHashing(t *testing.T) {
 			version:        "1.11.0",
 			expectedSuffix: ".sha1",
 			inputData:      []byte("hello"),
-			expectedHash:   sha1.New().Sum([]byte("hello")), //nolint:gosec // sha1 is needed by old releases of kubectl
+			expectedHash:   sha1.New().Sum([]byte("hello")),
 		},
 		{
 			name:           "sha512",

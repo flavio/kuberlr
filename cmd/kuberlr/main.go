@@ -62,7 +62,6 @@ func newRootCmd() *cobra.Command {
 
 func kubectlWrapperMode(args []string) {
 	cfg := config.NewCfg()
-	//nolint: varnamelen
 	v, err := cfg.Load()
 	if err != nil {
 		klog.Fatal(err)
