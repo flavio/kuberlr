@@ -37,8 +37,8 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 	}{
 		{
 			name:                     "requested version can be satisfied by already downloaded kubectl binary",
-			kubectlAvailableVersions: []string{"1.9.8"},
-			requestedVersion:         semver.MustParse("1.9.0"),
+			kubectlAvailableVersions: []string{"1.29.0", "1.26.0"},
+			requestedVersion:         semver.MustParse("1.30.2"),
 			expectedToMakeDownloads:  false,
 			downloadAllowed:          true,
 			expectsError:             false,
