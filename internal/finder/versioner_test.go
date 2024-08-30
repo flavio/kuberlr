@@ -2,68 +2,16 @@ package finder
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
-	"strings"
 	"testing"
 
-	"github.com/blang/semver/v4"
-
 	"github.com/flavio/kuberlr/internal/common"
+
+	"github.com/blang/semver/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
-
-type mockFinder struct {
-	localKubectlBinaries       func() (KubectlBinaries, error)
-	systemKubectlBinaries      func() (KubectlBinaries, error)
-	findCompatibleKubectl      func(requestedVersion semver.Version) (KubectlBinary, error)
-	mostRecentKubectlAvailable func() (KubectlBinary, error)
-}
-
-func (m *mockFinder) LocalKubectlBinaries() (KubectlBinaries, error) {
-	return m.localKubectlBinaries()
-}
-
-func (m *mockFinder) SystemKubectlBinaries() (KubectlBinaries, error) {
-	return m.systemKubectlBinaries()
-}
-
-func (m *mockFinder) AllKubectlBinaries(reverseSort bool) KubectlBinaries {
-	local, _ := m.localKubectlBinaries()
-	system, _ := m.systemKubectlBinaries()
-
-	//nolint: gocritic
-	all := append(local, system...)
-	SortKubectlByVersion(all, reverseSort)
-	return all
-}
-
-func (m *mockFinder) FindCompatibleKubectl(requestedVersion semver.Version) (KubectlBinary, error) {
-	return m.findCompatibleKubectl(requestedVersion)
-}
-
-func (m *mockFinder) MostRecentKubectlAvailable() (KubectlBinary, error) {
-	return m.mostRecentKubectlAvailable()
-}
-
-type mockDownloader struct {
-	getKubectlBinary      func(semver.Version, string) error
-	upstreamStableVersion func() (semver.Version, error)
-}
-
-func (m *mockDownloader) GetKubectlBinary(version semver.Version, destination string) error {
-	return m.getKubectlBinary(version, destination)
-}
-
-func (m *mockDownloader) UpstreamStableVersion() (semver.Version, error) {
-	return m.upstreamStableVersion()
-}
-
-type mockAPIServer struct {
-	version func(timeout int64) (semver.Version, error)
-}
-
-func (m *mockAPIServer) Version(timeout int64) (semver.Version, error) {
-	return m.version(timeout)
-}
 
 type mockTimeoutError struct {
 	Err error
@@ -78,221 +26,315 @@ func (e *mockTimeoutError) Timeout() bool {
 }
 
 // keep
-func TestEnsureCompatibleKubectlAvailableLocalBinaryFound(t *testing.T) {
-	expectedVersion := semver.MustParse("1.9.0")
-	expectedPath := "/tmp/kubectl-1.9.0"
-
-	finderMock := mockFinder{}
-	finderMock.findCompatibleKubectl = func(_ semver.Version) (KubectlBinary, error) {
-		return KubectlBinary{
-			Version: expectedVersion,
-			Path:    expectedPath,
-		}, nil
+func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *testing.T) {
+	tests := []struct {
+		name                     string
+		kubectlAvailableVersions []string
+		requestedVersion         semver.Version
+		expectedToMakeDownloads  bool
+		downloadAllowed          bool
+		expectsError             bool
+	}{
+		{
+			name:                     "requested version can be satisfied by already downloaded kubectl binary",
+			kubectlAvailableVersions: []string{"1.9.8"},
+			requestedVersion:         semver.MustParse("1.9.0"),
+			expectedToMakeDownloads:  false,
+			downloadAllowed:          true,
+			expectsError:             false,
+		},
+		{
+			name:                     "no kubectl binary available",
+			kubectlAvailableVersions: []string{},
+			requestedVersion:         semver.MustParse("1.9.0"),
+			expectedToMakeDownloads:  true,
+			downloadAllowed:          true,
+			expectsError:             false,
+		},
+		{
+			name:                     "no compatible kubectl binary available",
+			kubectlAvailableVersions: []string{"1.3.0", "1.2.0", "1.1.0"},
+			requestedVersion:         semver.MustParse("2.4.0"),
+			expectedToMakeDownloads:  true,
+			downloadAllowed:          true,
+			expectsError:             false,
+		},
+		{
+			name:                     "no compatible kubectl binary available but downloads are not allowed",
+			kubectlAvailableVersions: []string{"1.3.0", "1.2.0", "1.1.0"},
+			requestedVersion:         semver.MustParse("2.4.0"),
+			expectedToMakeDownloads:  false,
+			downloadAllowed:          false,
+			expectsError:             true,
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			requestedVersion := tt.requestedVersion
 
-	versioner := Versioner{
-		kFinder: &finderMock,
-	}
+			kubectlBins := KubectlBinaries{}
+			for _, version := range tt.kubectlAvailableVersions {
+				kubectlBins = append(kubectlBins, KubectlBinary{
+					Version: semver.MustParse(version),
+					Path:    fmt.Sprintf("path/to/kubectl-%s", version),
+				})
+			}
 
-	actual, err := versioner.EnsureCompatibleKubectlAvailable(expectedVersion, true)
-	if err != nil {
-		t.Errorf("Unexpected error %+v", err)
-	}
+			finderMock := NewMockiFinder(t)
+			finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
 
-	if actual != expectedPath {
-		t.Errorf("Got %s instead of %s", actual, expectedPath)
-	}
-}
+			downloaderMock := NewMockdownloadHelper(t)
+			if !tt.expectedToMakeDownloads || !tt.downloadAllowed {
+				// No expectation on downloader, as it should not be called
+			} else {
+				downloaderMock.EXPECT().GetKubectlBinary(requestedVersion, mock.AnythingOfType("string")).RunAndReturn(
+					func(version semver.Version, destination string) error {
+						assert.Contains(t, destination, common.LocalDownloadDir())
+						return nil
+					},
+				)
+			}
 
-// keep
-func TestEnsureCompatibleKubectlAvailableLocalBinaryNotFound(t *testing.T) {
-	finderMock := mockFinder{}
-	finderMock.findCompatibleKubectl = func(_ semver.Version) (KubectlBinary, error) {
-		return KubectlBinary{}, &common.NoVersionFoundError{}
-	}
+			versioner := Versioner{
+				kFinder:                           finderMock,
+				downloader:                        downloaderMock,
+				preventRecursiveInvocationEnvName: fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100)),
+			}
 
-	downloaderInvoked := false
-	downloaderMock := mockDownloader{}
-	downloaderMock.getKubectlBinary = func(semver.Version, string) error {
-		downloaderInvoked = true
-		return nil
-	}
-
-	versioner := Versioner{
-		kFinder:    &finderMock,
-		downloader: &downloaderMock,
-	}
-
-	expected := semver.MustParse("1.9.0")
-
-	actual, err := versioner.EnsureCompatibleKubectlAvailable(expected, true)
-	if err != nil {
-		t.Errorf("Unexpected error %+v", err)
-	}
-
-	if !strings.HasSuffix(actual, common.BuildKubectlNameForLocalBin(expected)) {
-		t.Errorf("Expected filename to end with %s instead I got %s", common.BuildKubectlNameForLocalBin(expected), actual)
-	}
-
-	if !downloaderInvoked {
-		t.Error("Downloder not used")
-	}
-}
-
-// keep
-func TestKubectlVersionToUseTimeoutButLocalKubectlAvailable(t *testing.T) {
-	localBins := fakeKubectlBinaries(
-		"/fake/home",
-		[]string{"1.2.0", "1.2.3", "1.9.0"},
-		&localKubectlNamer{})
-	systemBins := KubectlBinaries{}
-	expected := localBins[2]
-
-	err := genericTestKubectlVersionToUseTimeout(
-		localBins,
-		systemBins,
-		expected,
-		&mockDownloader{})
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-// keep
-func TestKubectlVersionToUseTimeoutButSystemKubectlAvailable(t *testing.T) {
-	systemBins := fakeKubectlBinaries(
-		"/usr/bin",
-		[]string{"1.2.0", "1.2.3", "1.9.0"},
-		&systemKubectlNamer{})
-	localBins := KubectlBinaries{}
-	expected := systemBins[2]
-
-	err := genericTestKubectlVersionToUseTimeout(
-		localBins,
-		systemBins,
-		expected,
-		&mockDownloader{})
-	if err != nil {
-		t.Error(err)
+			_, err := versioner.EnsureCompatibleKubectlAvailable(requestedVersion, tt.downloadAllowed)
+			if tt.expectsError {
+				assert.Error(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
 	}
 }
 
 // keep
-func TestKubectlVersionToUseTimeoutAndNoKubectlAvailable(t *testing.T) {
-	localBins := KubectlBinaries{}
-	systemBins := KubectlBinaries{}
-	expected := KubectlBinary{
-		Version: semver.MustParse("100.100.100"),
-		Path:    "fake",
-	}
+func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing.T) {
+	// a special version used later to indicate that we will not query the latest
+	// upstream version
+	upstreamVersionDoNotQuery := semver.MustParse("0.0.0")
 
-	downloadMock := mockDownloader{}
-	downloadMock.upstreamStableVersion = func() (semver.Version, error) {
-		return expected.Version, nil
+	tests := []struct {
+		name                         string
+		kubectlAvailableVersions     []string
+		latestUpstreamKubectlVersion semver.Version
+		expectedVersion              semver.Version
+	}{
+		{
+			name:                         "using latest kubectl version already downloaded",
+			kubectlAvailableVersions:     []string{"1.4.0", "1.2.0"},
+			latestUpstreamKubectlVersion: upstreamVersionDoNotQuery,
+			expectedVersion:              semver.MustParse("1.4.0"),
+		},
+		{
+			name:                         "use latest upstream version since no kubectl binary has ever been downloaded",
+			kubectlAvailableVersions:     []string{},
+			latestUpstreamKubectlVersion: semver.MustParse("1.4.0"),
+			expectedVersion:              semver.MustParse("1.4.0"),
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expectedVersion := tt.expectedVersion
+			kubectlBins := KubectlBinaries{}
+			for _, version := range tt.kubectlAvailableVersions {
+				kubectlBins = append(kubectlBins, KubectlBinary{
+					Version: semver.MustParse(version),
+					Path:    fmt.Sprintf("path/to/kubectl-%s", version),
+				})
+			}
 
-	err := genericTestKubectlVersionToUseTimeout(
-		localBins,
-		systemBins,
-		expected,
-		&downloadMock)
-	if err != nil {
-		t.Error(err)
+			finderMock := NewMockiFinder(t)
+			finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
+
+			downloaderMock := NewMockdownloadHelper(t)
+			if tt.latestUpstreamKubectlVersion.EQ(upstreamVersionDoNotQuery) {
+				// No expectation on downloader, as it should not be called
+			} else {
+				downloaderMock.EXPECT().UpstreamStableVersion().Return(tt.latestUpstreamKubectlVersion, nil)
+			}
+
+			expectedTimeout := int64(1)
+			apiMock := NewMockkubeAPIHelper(t)
+			apiMock.EXPECT().Version(expectedTimeout).Return(semver.Version{}, &mockTimeoutError{})
+
+			versioner := Versioner{
+				kFinder:                           finderMock,
+				apiServer:                         apiMock,
+				downloader:                        downloaderMock,
+				preventRecursiveInvocationEnvName: fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100)),
+			}
+
+			actual, err := versioner.KubectlVersionToUse(expectedTimeout)
+			assert.Nil(t, err)
+			assert.Equal(t, expectedVersion, actual, "got %s instead of %s", actual, expectedVersion)
+		})
 	}
 }
 
 // keep
-func genericTestKubectlVersionToUseTimeout(localBins, systemBins KubectlBinaries, expected KubectlBinary, downloader *mockDownloader) error {
-	apiMock := mockAPIServer{}
-	apiMock.version = func(_ int64) (semver.Version, error) {
-		return semver.Version{}, &mockTimeoutError{}
-	}
+func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
+	// a special version used later to indicate that we will not query the API
+	// server version
+	kubeAPIServerVersionDoNotQuery := semver.MustParse("0.0.0")
 
-	finderMock := mockFinder{}
-	finderMock.localKubectlBinaries = func() (KubectlBinaries, error) {
-		err := &common.NoVersionFoundError{}
-		if len(localBins) > 0 {
-			err = nil
-		}
-		return localBins, err
+	tests := []struct {
+		name                     string
+		recursionHappening       bool
+		kubectlAvailableVersions []string
+		kubeAPIServerVersion     semver.Version
+		expectedVersion          semver.Version
+	}{
+		{
+			name:                     "kuberlr is being called recursively, use most recent kubectl version downloaded",
+			recursionHappening:       true,
+			kubectlAvailableVersions: []string{"1.4.0", "1.2.0"},
+			kubeAPIServerVersion:     kubeAPIServerVersionDoNotQuery,
+			expectedVersion:          semver.MustParse("1.4.0"),
+		},
+		{
+			name:                     "no recursion happening, query kube API server",
+			recursionHappening:       false,
+			kubectlAvailableVersions: []string{"1.4.0", "1.2.0"},
+			kubeAPIServerVersion:     semver.MustParse("1.20.0"),
+			expectedVersion:          semver.MustParse("1.20.0"),
+		},
 	}
-	finderMock.systemKubectlBinaries = func() (KubectlBinaries, error) {
-		err := &common.NoVersionFoundError{}
-		if len(systemBins) > 0 {
-			err = nil
-		}
-		return systemBins, err
-	}
-	finderMock.mostRecentKubectlAvailable = func() (KubectlBinary, error) {
-		return expected, nil
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			preventRecursiveInvocationEnvName := fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100))
+			if tt.recursionHappening {
+				os.Setenv(preventRecursiveInvocationEnvName, "1")
+				defer os.Unsetenv(preventRecursiveInvocationEnvName)
+			}
 
-	versioner := Versioner{
-		kFinder:    &finderMock,
-		apiServer:  &apiMock,
-		downloader: downloader,
-	}
+			expectedVersion := tt.expectedVersion
+			kubectlBins := KubectlBinaries{}
+			for _, version := range tt.kubectlAvailableVersions {
+				kubectlBins = append(kubectlBins, KubectlBinary{
+					Version: semver.MustParse(version),
+					Path:    fmt.Sprintf("path/to/kubectl-%s", version),
+				})
+			}
 
-	actual, err := versioner.KubectlVersionToUse(1)
-	if err != nil {
-		return err
-	}
+			finderMock := NewMockiFinder(t)
+			if tt.recursionHappening {
+				finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
+			} else {
+				// No expectation set, as we should not query the local kubectl binaries
+				// but instead query the API server
+			}
 
-	if !actual.Equals(expected.Version) {
-		return fmt.Errorf("Got %s instead of %s", actual, expected)
-	}
+			// No expectation on downloader, as it should not be called
+			downloaderMock := NewMockdownloadHelper(t)
 
-	return nil
+			expectedTimeout := int64(1)
+			apiMock := NewMockkubeAPIHelper(t)
+			if tt.recursionHappening {
+				// No expectation on API server, as it should not be called
+			} else {
+				apiMock.EXPECT().Version(expectedTimeout).Return(tt.kubeAPIServerVersion, nil)
+			}
+
+			versioner := Versioner{
+				kFinder:                           finderMock,
+				apiServer:                         apiMock,
+				downloader:                        downloaderMock,
+				preventRecursiveInvocationEnvName: preventRecursiveInvocationEnvName,
+			}
+
+			actual, err := versioner.KubectlVersionToUse(expectedTimeout)
+			assert.Nil(t, err)
+			assert.Equal(t, expectedVersion, actual, "got %s instead of %s", actual, expectedVersion)
+		})
+	}
 }
 
-// keep
-func TestKubectlVersionToUseSetsInfiniteRecursionPreventionEnvironmentVariable(t *testing.T) {
-	apiServerVersion := false
-	versioner := Versioner{
-		apiServer: &mockAPIServer{
-			version: func(_ int64) (semver.Version, error) {
-				_, hasRecursionPreventionEnvironmentVariable := os.LookupEnv(PreventRecursiveInvocationEnvName)
-				if !hasRecursionPreventionEnvironmentVariable {
-					t.Errorf("Expected recursion prevention environment variable %s to be set when getting the version from kube API", PreventRecursiveInvocationEnvName)
+func TestFindCompatibleKubectl(t *testing.T) {
+	// a special version used later to indicate that no match is expected
+	noVersionExpected := semver.MustParse("0.0.0")
+
+	tests := []struct {
+		name                     string
+		kubectlAvailableVersions []string
+		requestedVersion         semver.Version
+		expectedVersion          semver.Version
+	}{
+		{
+			name: "lower bound match",
+			kubectlAvailableVersions: []string{
+				"3.0.0",
+				"2.1.3",
+				"1.4.2",
+				"1.1.3",
+			},
+			requestedVersion: semver.MustParse("1.5.13"),
+			expectedVersion:  semver.MustParse("1.4.2"),
+		},
+		{
+			name: "upper bound match",
+			kubectlAvailableVersions: []string{
+				"2.1.3",
+				"1.4.2",
+				"1.1.3",
+			},
+			requestedVersion: semver.MustParse("2.1.0"),
+			expectedVersion:  semver.MustParse("2.1.3"),
+		},
+		{
+			name: "most recent version",
+			kubectlAvailableVersions: []string{
+				"2.1.3",
+				"1.5.3",
+				"1.4.2",
+				"1.1.3",
+			},
+			requestedVersion: semver.MustParse("1.4.0"),
+			expectedVersion:  semver.MustParse("1.5.3"),
+		},
+		{
+			name:                     "no kubectl binaries available",
+			kubectlAvailableVersions: []string{},
+			requestedVersion:         semver.MustParse("1.4.0"),
+			expectedVersion:          noVersionExpected,
+		},
+		{
+			name:                     "no compatible version available",
+			kubectlAvailableVersions: []string{"1.3.0", "1.2.0", "1.1.0"},
+			requestedVersion:         semver.MustParse("2.4.0"),
+			expectedVersion:          noVersionExpected,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			kubectlBins := KubectlBinaries{}
+			for _, version := range tt.kubectlAvailableVersions {
+				kubectlBins = append(kubectlBins, KubectlBinary{
+					Version: semver.MustParse(version),
+					Path:    fmt.Sprintf("path/to/kubectl-%s", version),
+				})
+			}
+			expected := KubectlBinary{
+				Version: tt.expectedVersion,
+				Path:    fmt.Sprintf("path/to/kubectl-%s", tt.expectedVersion),
+			}
+
+			actual, err := findCompatibleKubectl(tt.requestedVersion, kubectlBins)
+			if tt.expectedVersion.EQ(noVersionExpected) {
+				assert.NotNil(t, err)
+				is_no_version_found := func() bool {
+					return common.IsNoVersionFound(err)
 				}
-				apiServerVersion = true
-				return semver.Version{}, nil
-			},
-		},
-	}
-	_, err := versioner.KubectlVersionToUse(1)
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if !apiServerVersion {
-		t.Error("Expected api server version to be called")
-	}
-	_, hasRecursionPreventionEnvironmentVariable := os.LookupEnv(PreventRecursiveInvocationEnvName)
-	if hasRecursionPreventionEnvironmentVariable {
-		t.Errorf("Expected recursion prevention environment variable %s to be removed after version is retrieved", PreventRecursiveInvocationEnvName)
-	}
-}
-
-// keep
-func TestKubectlVersionToUseUsesLatestOrLatestVersionAvailableWhenRecursionIsPrevented(t *testing.T) {
-	t.Setenv(PreventRecursiveInvocationEnvName, "1")
-	versioner := Versioner{
-		apiServer: &mockAPIServer{
-			version: func(_ int64) (semver.Version, error) {
-				t.Errorf("Expected api server version to not be called when recursion is prevented")
-				return semver.Version{}, nil
-			},
-		},
-		kFinder: &mockFinder{
-			mostRecentKubectlAvailable: func() (KubectlBinary, error) {
-				return KubectlBinary{
-					Version: semver.MustParse("1.2.3"),
-				}, nil
-			},
-		},
-	}
-	_, err := versioner.KubectlVersionToUse(1)
-	if err != nil {
-		t.Errorf("Unexpected error %v", err)
+				assert.Condition(t, is_no_version_found)
+			} else {
+				assert.Nil(t, err)
+				assert.Equal(t, expected, actual, "got %s instead of %s", actual, expected)
+			}
+		})
 	}
 }

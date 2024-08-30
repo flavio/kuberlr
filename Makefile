@@ -136,3 +136,6 @@ image-build: buildx-machine ## build (and load) the container image targeting th
 		--build-arg TAG=$(TAG) \
 		-t "$(IMAGE)" $(BUILD_ACTION) .
 	@echo "Built $(IMAGE)"
+
+generate-mocks:
+	mockery

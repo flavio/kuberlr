@@ -1,0 +1,9 @@
+with-expecter: true
+dir: "{{.InterfaceDir}}"
+inpackage: true
+packages:
+  github.com/flavio/kuberlr/internal/finder:
+    interfaces:
+      iFinder:
+      downloadHelper:
+      kubeAPIHelper:
