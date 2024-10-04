@@ -10,8 +10,8 @@ import (
 )
 
 var configPaths = []string{
-	filepath.Join(os.Getenv("APPDATA"), "kuberlr"),
-	filepath.Join(os.Getenv("PROGRAMDATA"), "kuberlr"),
-	ThisExecutableDir(),
-	filepath.Join(common.HomeDir(), ".kuberlr"),
+	filepath.Join(os.Getenv("APPDATA"), "kuberlr", "kuberlr.conf"),
+	filepath.Join(os.Getenv("PROGRAMDATA"), "kuberlr", "kuberlr.conf"),
+	filepath.Join(common.HomeDir(), ".kuberlr", "kuberlr.conf"),
+	os.Getenv("KUBERLR_CFG"),
 }
