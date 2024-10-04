@@ -13,5 +13,5 @@ var configPaths = []string{ //nolint: gochecknoglobals // arrays cannot be go co
 	"/usr/etc/kuberlr.conf",
 	"/etc/kuberlr.conf",
 	filepath.Join(common.HomeDir(), ".kuberlr", "kuberlr.conf"),
-	os.Getenv("KUBERLR_CFG");
+	os.Getenv("KUBERLR_CFG"),
 }
