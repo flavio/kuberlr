@@ -4,9 +4,10 @@
 package config
 
 import (
-	"github.com/flavio/kuberlr/internal/common"
 	"os"
 	"path/filepath"
+
+	"github.com/flavio/kuberlr/internal/common"
 )
 
 var configPaths = []string{ //nolint: gochecknoglobals // arrays cannot be go constants
