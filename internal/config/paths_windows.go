@@ -10,7 +10,7 @@ import (
 	"github.com/flavio/kuberlr/internal/common"
 )
 
-var configPaths = []string{
+var configFiles = []string{
 	filepath.Join(os.Getenv("APPDATA"), "kuberlr", "kuberlr.conf"),
 	filepath.Join(os.Getenv("PROGRAMDATA"), "kuberlr", "kuberlr.conf"),
 	filepath.Join(common.HomeDir(), ".kuberlr", "kuberlr.conf"),

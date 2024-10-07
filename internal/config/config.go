@@ -20,7 +20,7 @@ type Cfg struct {
 // directories.
 func NewCfg() *Cfg {
 	return &Cfg{
-		Paths: configPaths,
+		Paths: configFiles,
 	}
 }
 
@@ -57,19 +57,15 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 	return v.GetString("KubeMirrorUrl"), nil
 }
 
-func mergeConfig(v *viper.Viper, extraConfigPath string) error {
-	if len(extraConfigPath) == 0 {
-		return nil
-	}
-
-	_, err := os.Stat(extraConfigPath)
+func mergeConfig(v *viper.Viper, cfgFile string) error {
+	_, err := os.Stat(cfgFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
 	}
-	v.SetConfigFile(extraConfigPath)
+	v.SetConfigFile(cfgFile)
 
 	return v.MergeInConfig()
 }
