@@ -144,6 +144,7 @@ AllowDownload = true
 			filepath.Join(td.FakeUsrEtc, "kuberlr.conf"),
 			filepath.Join(td.FakeEtc, "kuberlr.conf"),
 			filepath.Join(td.FakeHome, "kuberlr.conf"),
+			os.Getenv("__FAKE_ENV__"),
 		},
 	}
 
