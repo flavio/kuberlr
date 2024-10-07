@@ -109,6 +109,7 @@ one of these locations:
    more details [here](https://en.opensuse.org/openSUSE:Packaging_UsrEtc).
 1. `/etc/kuberlr.conf`
 1. `$HOME/.kuberlr/kuberlr.conf`
+1. `$KUBERLR_CFG`
 
 The configuration files are read in the order written above and merged together.
 Configuration files can override the values defined by the previous ones, or

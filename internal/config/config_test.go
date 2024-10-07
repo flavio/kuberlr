@@ -57,7 +57,11 @@ func TestOnlySystemConfigExists(t *testing.T) {
 	}
 
 	c := Cfg{
-		Paths: []string{td.FakeUsrEtc, td.FakeEtc, td.FakeHome},
+		Paths: []string{
+			filepath.Join(td.FakeUsrEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeHome, "kuberlr.conf"),
+		},
 	}
 
 	v, err := c.Load()
@@ -86,7 +90,11 @@ func TestHomeConfigOverridesSystemOne(t *testing.T) {
 	}
 
 	c := Cfg{
-		Paths: []string{td.FakeUsrEtc, td.FakeEtc, td.FakeHome},
+		Paths: []string{
+			filepath.Join(td.FakeUsrEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeHome, "kuberlr.conf"),
+		},
 	}
 
 	v, err := c.Load()
@@ -132,7 +140,12 @@ AllowDownload = true
 	}
 
 	c := Cfg{
-		Paths: []string{td.FakeUsrEtc, td.FakeEtc, td.FakeHome},
+		Paths: []string{
+			filepath.Join(td.FakeUsrEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeEtc, "kuberlr.conf"),
+			filepath.Join(td.FakeHome, "kuberlr.conf"),
+			os.Getenv("__FAKE_ENV__"),
+		},
 	}
 
 	v, err := c.Load()
