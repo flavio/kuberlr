@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 
@@ -21,7 +20,7 @@ type Cfg struct {
 // directories.
 func NewCfg() *Cfg {
 	return &Cfg{
-		Paths: configPaths,
+		Paths: configFiles,
 	}
 }
 
@@ -58,9 +57,7 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 	return v.GetString("KubeMirrorUrl"), nil
 }
 
-func mergeConfig(v *viper.Viper, extraConfigPath string) error {
-	cfgFile := filepath.Join(extraConfigPath, "kuberlr.conf")
-
+func mergeConfig(v *viper.Viper, cfgFile string) error {
 	_, err := os.Stat(cfgFile)
 	if err != nil {
 		if os.IsNotExist(err) {
