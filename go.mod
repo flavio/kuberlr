@@ -6,7 +6,7 @@ toolchain go1.22.3
 
 require (
 	github.com/blang/semver/v4 v4.0.0
-	github.com/jedib0t/go-pretty/v6 v6.6.1
+	github.com/jedib0t/go-pretty/v6 v6.6.2
 	github.com/schollz/progressbar/v3 v3.17.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
