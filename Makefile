@@ -14,9 +14,8 @@ GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
 GO_VERSION_MIN := $(shell echo $(GO_VERSION) | cut -f2 -d'.')
 
 # golangci linter
-GOLANGCI_LINT_VER := v1.60.3
-GOLANGCI_LINT_BIN := golangci-lint
-GOLANGCI_LINT := $(BINPATH)/$(GOLANGCI_LINT_BIN)
+GOLANGCI_LINT_VERSION := v1.62.2
+GOLANGCI_LINT ?= go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 GOFMT ?= gofmt
 RM = rm
@@ -94,17 +93,13 @@ go-version-check:
 		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 20 ] || (echo "FATAL: Go version should be >= 1.20.x" ; exit 1 ; )
 
 .PHONY: lint
-lint: deps
+lint:
 	# explicitly enable GO111MODULE otherwise go mod will fail
 	GO111MODULE=on go mod tidy && GO111MODULE=on go mod vendor && GO111MODULE=on go mod verify
 	# run go fmt
 	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
 	# run golangci-lint
 	$(GOLANGCI_LINT) run
-
-.PHONY: deps
-deps:
-	GOBIN=$(BINPATH) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
 
 # tests
 .PHONY: test
