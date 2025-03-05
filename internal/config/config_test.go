@@ -41,7 +41,7 @@ func writeConfig(path, data string) error {
 	return os.WriteFile(
 		filepath.Join(path, "kuberlr.conf"),
 		[]byte(data),
-		0600)
+		0o600)
 }
 
 func TestOnlySystemConfigExists(t *testing.T) {
@@ -103,6 +103,33 @@ func TestHomeConfigOverridesSystemOne(t *testing.T) {
 	}
 	if v.GetBool("AllowDownload") != true {
 		t.Error("Expected configuration value wasn't found")
+	}
+}
+
+func TestEnvironmentVariables(t *testing.T) {
+	td, err := setup()
+	if err != nil {
+		t.Error(err)
+	}
+	defer teardown(td)
+
+	err = writeConfig(td.FakeHome, "AllowDownload = false")
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Setenv("KUBERLR_ALLOWDOWNLOAD", "true")
+
+	c := Cfg{
+		Paths: []string{},
+	}
+
+	v, err := c.Load()
+	if err != nil {
+		t.Errorf("Unexpected error loading config: %v", err)
+	}
+	if v.GetBool("AllowDownload") != true {
+		t.Error("env var wasn't taken into account")
 	}
 }
 
