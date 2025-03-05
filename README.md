@@ -131,3 +131,7 @@ Timeout = 1
 # Default "https://dl.k8s.io"
 KubeMirrorUrl = "https://dl.k8s.io"
 ```
+
+The behaviour can also be adjusted by using environment variables matching the
+config file: `KUBERLR_ALLOWDOWNLOAD`, `KUBERLR_SYSTEMPATH`, `KUBERLR_TIMEOUT`,
+`KUBERLR_KUBEMIRRORURL`, and so on.

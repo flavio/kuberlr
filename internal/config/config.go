@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -33,6 +34,11 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 
 	v.SetConfigType("toml")
+
+	// read environment variables, they take precedence
+	v.AutomaticEnv()
+	v.SetEnvPrefix("KUBERLR")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if len(c.Paths) == 0 {
 		return v, nil
