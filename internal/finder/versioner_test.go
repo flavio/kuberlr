@@ -201,7 +201,7 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			preventRecursiveInvocationEnvName := fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100))
 			if tt.recursionHappening {
-				os.Setenv(preventRecursiveInvocationEnvName, "1")
+				t.Setenv(preventRecursiveInvocationEnvName, "1")
 				defer os.Unsetenv(preventRecursiveInvocationEnvName)
 			}
 
