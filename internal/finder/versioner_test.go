@@ -3,7 +3,6 @@ package finder
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"testing"
 
 	"github.com/flavio/kuberlr/internal/common"
@@ -201,8 +200,7 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			preventRecursiveInvocationEnvName := fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100))
 			if tt.recursionHappening {
-				os.Setenv(preventRecursiveInvocationEnvName, "1")
-				defer os.Unsetenv(preventRecursiveInvocationEnvName)
+				t.Setenv(preventRecursiveInvocationEnvName, "1")
 			}
 
 			expectedVersion := tt.expectedVersion
