@@ -20,6 +20,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/schollz/progressbar/v3"
+	"k8s.io/klog"
 )
 
 func getKubeMirrorURL() (string, error) {
@@ -29,8 +30,7 @@ func getKubeMirrorURL() (string, error) {
 
 // Downloder is a helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information.
-type Downloder struct {
-}
+type Downloder struct{}
 
 func (d *Downloder) getContentsOfURL(url string) (string, error) {
 	//nolint: gosec,noctx // the url is built internally
@@ -48,7 +48,11 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 	}
 
 	v, err := io.ReadAll(res.Body)
-	res.Body.Close()
+	defer func() {
+		if e := res.Body.Close(); e != nil {
+			klog.V(common.VerbosityTwo).Infof("error closing response body: %v", e)
+		}
+	}()
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +98,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 
 		if _, err = os.Stat(filepath.Dir(destination)); err != nil {
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(filepath.Dir(destination), os.ModePerm)
+				err = os.MkdirAll(filepath.Dir(destination), os.ModeDir)
 			}
 			if err != nil {
 				return err
@@ -102,7 +106,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 		}
 
 		//nolint: mnd // setting the mode to read/write/execute for owner only
-		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0755)
+		err = d.download(fmt.Sprintf("kubectl%s%s", version, osexec.Ext), downloadURL, hashing, destination, 0o755)
 		if err == nil {
 			return nil
 		}
@@ -147,7 +151,8 @@ func (d *Downloder) download(desc string,
 	urlToGet string,
 	hashing *Hashing,
 	destination string,
-	mode os.FileMode) error {
+	mode os.FileMode,
+) error {
 	shaURLToGet := urlToGet + hashing.Suffix
 	shaExpected, err := d.getContentsOfURL(shaURLToGet)
 	if err != nil {
@@ -203,7 +208,9 @@ func (d *Downloder) download(desc string,
 
 	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hashing.Hasher), resp.Body)
 	if err != nil {
-		temporaryDestinationFile.Close()
+		if e := temporaryDestinationFile.Close(); e != nil {
+			klog.V(common.VerbosityTwo).Infof("error closing temporary file: %v", e)
+		}
 		return fmt.Errorf(
 			"error while downloading text of %s into file %s: %w",
 			urlToGet, tmpname, err)
@@ -211,7 +218,9 @@ func (d *Downloder) download(desc string,
 
 	// Closing the file handler prior to performing a rename so this process (the
 	// open file handler) does not conflict with the rename.
-	temporaryDestinationFile.Close()
+	if err = temporaryDestinationFile.Close(); err != nil {
+		return fmt.Errorf("error closing temporary file %s: %w", tmpname, err)
+	}
 
 	shaActual := hex.EncodeToString(hashing.Hasher.Sum(nil))
 	if shaExpected != shaActual {
