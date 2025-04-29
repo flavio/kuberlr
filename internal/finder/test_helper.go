@@ -14,8 +14,7 @@ type kubectlNamer interface {
 	Compute(version semver.Version) string
 }
 
-type localKubectlNamer struct {
-}
+type localKubectlNamer struct{}
 
 func (n *localKubectlNamer) ID() string {
 	return "local"
@@ -25,8 +24,7 @@ func (n *localKubectlNamer) Compute(v semver.Version) string {
 	return common.BuildKubectlNameForLocalBin(v)
 }
 
-type systemKubectlNamer struct {
-}
+type systemKubectlNamer struct{}
 
 func (n *systemKubectlNamer) ID() string {
 	return "system"
@@ -67,7 +65,7 @@ func createFakeKubectlBinaries(bins KubectlBinaries) error {
 		_, err := os.Stat(dir)
 		if err != nil {
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(dir, 0755)
+				err = os.MkdirAll(dir, os.ModeDir)
 				if err != nil {
 					return err
 				}

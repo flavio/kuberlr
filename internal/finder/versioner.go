@@ -46,12 +46,6 @@ func NewVersioner(f iFinder) *Versioner {
 	}
 }
 
-const (
-	_ = iota
-	VerbosityOne
-	VerbosityTwo
-)
-
 const PreventRecursiveInvocationEnvName = "KUBERLR_RESOLVING_VERSION"
 
 // KubectlVersionToUse returns the kubectl version to be used to interact with
@@ -68,11 +62,13 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 
 	_, recursiveInvocationDetected := os.LookupEnv(v.preventRecursiveInvocationEnvName)
 	if recursiveInvocationDetected {
-		klog.V(VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
+		klog.V(common.VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
 		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 
-	os.Setenv(v.preventRecursiveInvocationEnvName, "1")
+	if err := os.Setenv(v.preventRecursiveInvocationEnvName, "1"); err != nil {
+		return semver.Version{}, fmt.Errorf("failed to set environment variable %s: %w", v.preventRecursiveInvocationEnvName, err)
+	}
 	defer os.Unsetenv(v.preventRecursiveInvocationEnvName)
 
 	version, err := v.apiServer.Version(timeout)
@@ -80,9 +76,9 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		if isUnreachable(err) {
 			// the remote server is unreachable, let's get
 			// the latest version of kubectl that is available on the system
-			klog.V(VerbosityTwo).Info("Remote kubernetes server unreachable")
+			klog.V(common.VerbosityTwo).Info("Remote kubernetes server unreachable")
 		} else {
-			klog.V(VerbosityOne).Info(err)
+			klog.V(common.VerbosityOne).Info(err)
 		}
 		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
@@ -98,7 +94,7 @@ func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (sem
 		return kubectl.Version, nil
 	}
 
-	klog.V(VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
+	klog.V(common.VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
 	return v.downloader.UpstreamStableVersion()
 }
 
