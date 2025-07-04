@@ -64,24 +64,24 @@ func kubectlWrapperMode(args []string) {
 	cfg := config.NewCfg()
 	v, err := cfg.Load()
 	if err != nil {
-		klog.Fatal(err)
+		klog.Fatalf("kuberlr: load config: %v", err)
 	}
 
 	kubectlFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
 	versioner := finder.NewVersioner(kubectlFinder)
 	version, err := versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
 	if err != nil {
-		klog.Fatal(err)
+		klog.Fatalf("kuberlr: find kubectl version to use: %v", err)
 	}
 
 	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(
 		version,
 		v.GetBool("AllowDownload"))
 	if err != nil {
-		klog.Fatal(err)
+		klog.Fatalf("kuberlr: ensure compatible kubectl available: %v", err)
 	}
 
 	childArgs := append([]string{kubectlBin}, args...)
 	err = osexec.Exec(kubectlBin, childArgs, os.Environ())
-	klog.Fatal(err)
+	klog.Fatalf("kuberlr: execute kubectl binary located at %s: %v", kubectlBin, err)
 }
