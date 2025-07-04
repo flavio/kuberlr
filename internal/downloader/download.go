@@ -98,7 +98,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 
 		if _, err = os.Stat(filepath.Dir(destination)); err != nil {
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(filepath.Dir(destination), os.ModeDir)
+				err = os.MkdirAll(filepath.Dir(destination), 0750)
 			}
 			if err != nil {
 				return err
