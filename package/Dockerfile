@@ -5,7 +5,7 @@ FROM registry.suse.com/bci/bci-busybox:${BCI_VERSION} AS final
 # Image that provides cross compilation tooling.
 FROM --platform=$BUILDPLATFORM rancher/mirrored-tonistiigi-xx:1.3.0 AS xx
 
-FROM --platform=$BUILDPLATFORM registry.suse.com/bci/golang:1.23 AS build
+FROM --platform=$BUILDPLATFORM registry.suse.com/bci/golang:1.24 AS build
 
 ARG TARGETPLATFORM
 ARG PROJECT_PATH
@@ -22,9 +22,9 @@ ENV CGO_ENABLED=0
 RUN xx-go --wrap && mkdir -p /run/lock
 RUN xx-go mod download && \
     xx-go build -ldflags "-X=${PROJECT_PATH}/pkg/kuberlr.Version=${VERSION} \
-        -X=${PROJECT_PATH}/pkg/kuberlr.BuildDate=${BUILD_DATE:-$(date +%Y%m%d)} \
-        -X=${PROJECT_PATH}/pkg/kuberlr.Tag=${TAG}" \
-        -o ./bin/kuberlr ./cmd/kuberlr
+    -X=${PROJECT_PATH}/pkg/kuberlr.BuildDate=${BUILD_DATE:-$(date +%Y%m%d)} \
+    -X=${PROJECT_PATH}/pkg/kuberlr.Tag=${TAG}" \
+    -o ./bin/kuberlr ./cmd/kuberlr
 RUN xx-verify --static ./bin/kuberlr
 
 FROM registry.suse.com/bci/bci-base:${BCI_VERSION} AS zypper
