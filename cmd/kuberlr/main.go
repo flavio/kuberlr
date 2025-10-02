@@ -76,7 +76,9 @@ func kubectlWrapperMode(args []string) {
 
 	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(
 		version,
-		v.GetBool("AllowDownload"))
+		v.GetBool("AllowDownload"),
+		v.GetBool("UseLatestIfNoCompatible"),
+	)
 	if err != nil {
 		klog.Fatalf("kuberlr: ensure compatible kubectl available: %v", err)
 	}
