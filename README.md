@@ -121,6 +121,16 @@ The configuration file is written using the [TOML format](https://github.com/tom
 # Allow the download of missing kubectl binaries from kubernetes' upstream mirror
 AllowDownload = true
 
+# When NO compatible local kubectl is found, opt-in to using the NEWEST local kubectl
+# instead of failing in these cases:
+#   1) downloads are disabled (AllowDownload = false), OR
+#   2) a download attempt fails (e.g., no network, blocked mirror).
+#
+# Default: false
+# WARNING: this may run a kubectl that is outside Kubernetes' version skew policy
+# and could be incompatible with your API server. Use with care.
+UseLatestIfNoCompatible = false
+
 # Directory where kubectl binaries are made accessible to all the users of the system
 SystemPath = "/opt/bin"
 
@@ -132,6 +142,12 @@ Timeout = 1
 KubeMirrorUrl = "https://dl.k8s.io"
 ```
 
-The behaviour can also be adjusted by using environment variables matching the
-config file: `KUBERLR_ALLOWDOWNLOAD`, `KUBERLR_SYSTEMPATH`, `KUBERLR_TIMEOUT`,
-`KUBERLR_KUBEMIRRORURL`, and so on.
+The behaviour can also be adjusted by using environment variables matching the config file:
+ | Key                 | Default | ENV                         | Description |
+ |---------------------|---------|-----------------------------|-------------|
+ | `AllowDownload`     | `true`  | `KUBERLR_ALLOWDOWNLOAD`     | Whether kuberlr may download a compatible `kubectl` from the upstream mirror. |
+ | `UseLatestIfNoCompatible` | `false` | `KUBERLR_USELATESTIFNOCOMPATIBLE` When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
+ | `SystemPath`         | `/opt/bin`    | `KUBERLR_SYSTEMPATH`        | Additional directory to scan for system-wide `kubectl` binaries. |
+ | `KubeMirrorUrl`      | `https://dl.k8s.io`    | `KUBERLR_KUBEMIRRORURL`     | Custom upstream mirror for downloads. |
+ | `Timeout`            | `10`    | `KUBERLR_TIMEOUT`           | Timeout (seconds) for contacting the API server to detect version. |
+ 
