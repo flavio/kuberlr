@@ -2,12 +2,6 @@ GOMOD ?= on
 GO ?= GO111MODULE=$(GOMOD) go
 BINPATH := $(abspath ./bin)
 
-#Don't enable mod=vendor when GOMOD is off or else go build/install will fail
-GOMODFLAG ?=
-ifeq ($(GOMOD), off)
-GOMODFLAG=
-endif
-
 #retrieve go version details for version check
 GO_VERSION     := $(shell $(GO) version | sed -e 's/^[^0-9.]*\([0-9.]*\).*/\1/')
 GO_VERSION_MAJ := $(shell echo $(GO_VERSION) | cut -f1 -d'.')
@@ -40,7 +34,7 @@ KUBERLR_LDFLAGS  = -ldflags "-X=$(PROJECT_PATH)/pkg/kuberlr.Version=$(VERSION) \
 
 KUBERLR_DIRS = cmd pkg internal
 
-# go source files, ignore vendor directory
+# go source files
 KUBERLR_SRCS = $(shell find $(KUBERLR_DIRS) -type f -name '*.go')
 
 # Define target platforms, image builder and the fully qualified image name.
@@ -59,11 +53,11 @@ all: install
 
 .PHONY: build
 build: go-version-check
-	$(GO) build $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
+	$(GO) build $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
 
 .PHONY: install
 install: go-version-check
-	$(GO) install $(GOMODFLAG) $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
+	$(GO) install $(KUBERLR_LDFLAGS) -tags $(TAGS) ./cmd/...
 
 .PHONY: clean
 clean:
@@ -90,8 +84,7 @@ go-version-check:
 
 .PHONY: lint
 lint: golangci-lint
-	# explicitly enable GO111MODULE otherwise go mod will fail
-	GO111MODULE=on go mod tidy && GO111MODULE=on go mod vendor && GO111MODULE=on go mod verify
+	GO111MODULE=on go mod tidy && GO111MODULE=on go mod verify
 	# run go fmt
 	test -z `$(GOFMT) -l $(KUBERLR_SRCS)` || { $(GOFMT) -d $(KUBERLR_SRCS) && false; }
 	# run golangci-lint
@@ -107,7 +100,7 @@ test: test-unit test-bench
 
 .PHONY: test-unit
 test-unit:
-	$(GO) test $(GOMODFLAG) -coverprofile=coverage.out $(PROJECT_PATH)/{cmd,pkg,internal}/...
+	$(GO) test -coverprofile=coverage.out $(PROJECT_PATH)/{cmd,pkg,internal}/...
 
 .PHONY: test-unit-coverage
 test-unit-coverage: test-unit
@@ -115,7 +108,7 @@ test-unit-coverage: test-unit
 
 .PHONY: test-bench
 test-bench:
-	$(GO) test $(GOMODFLAG) -bench=. $(PROJECT_PATH)/{cmd,pkg,internal}/...
+	$(GO) test -bench=. $(PROJECT_PATH)/{cmd,pkg,internal}/...
 
 buildx-machine: ## create rancher dockerbuildx machine targeting platform defined by DEFAULT_PLATFORMS.
 	@docker buildx ls | grep $(MACHINE) || \
