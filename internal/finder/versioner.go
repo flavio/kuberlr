@@ -101,7 +101,7 @@ func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (sem
 // EnsureCompatibleKubectlAvailable ensures the kubectl binary with the specified
 // version is available on the system. It will return the full path to the
 // binary.
-func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, allowDownload bool) (string, error) {
+func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, allowDownload bool, useLatestIfNoCompatible bool) (string, error) {
 	bins := v.kFinder.AllKubectlBinaries(true)
 	kubectl, err := findCompatibleKubectl(version, bins)
 	if err == nil {
@@ -109,6 +109,12 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 	}
 
 	if !allowDownload {
+		if useLatestIfNoCompatible {
+			all := v.kFinder.AllKubectlBinaries(true /* reverseSort */)
+			if len(all) > 0 {
+				return all[0].Path, nil
+			}
+		}
 		return "", errors.New("the right kubectl is missing, binary downloads from kubernetes' upstream mirror are disabled")
 	}
 
@@ -120,7 +126,15 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 		common.BuildKubectlNameForLocalBin(version))
 
 	if err = v.downloader.GetKubectlBinary(version, filename); err != nil {
-		return "", err
+		if useLatestIfNoCompatible {
+			all := v.kFinder.AllKubectlBinaries(true) // newest-first
+			if len(all) > 0 {
+				klog.Infof("download failed (%v); falling back to newest local kubectl %s at %s",
+					err, all[0].Version, all[0].Path)
+				return all[0].Path, nil
+			}
+		}
+		return "", fmt.Errorf("failed to download compatible kubectl: %w", err)
 	}
 
 	return filename, nil
