@@ -2,6 +2,16 @@
 # Default true
 AllowDownload = true
 
+# When NO compatible local kubectl is found, opt-in to using the NEWEST local kubectl
+# instead of failing in these cases:
+#   1) downloads are disabled (AllowDownload = false), OR
+#   2) a download attempt fails (e.g., no network, blocked mirror).
+#
+# Default: false
+# WARNING: this may run a kubectl that is outside Kubernetes' version skew policy
+# and could be incompatible with your API server. Use with care.
+UseLatestIfNoCompatible = false
+
 # Directory where kubectl binaries are made accessible to all the users of the system
 # Default "/usr/bin"
 SystemPath = "/usr/bin"
