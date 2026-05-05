@@ -98,7 +98,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 
 		if _, err = os.Stat(filepath.Dir(destination)); err != nil {
 			if os.IsNotExist(err) {
-				err = os.MkdirAll(filepath.Dir(destination), 0750)
+				err = os.MkdirAll(filepath.Dir(destination), 0o750)
 			}
 			if err != nil {
 				return err
@@ -145,6 +145,27 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 	}
 
 	return url.String(), nil
+}
+
+// copyFile copies the contents of src to dst with the given file mode.
+// It is used as a fallback when os.Rename fails due to a cross-device link error.
+func copyFile(src, dst string, mode os.FileMode) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("error opening source file %s: %w", src, err)
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+	if err != nil {
+		return fmt.Errorf("error opening destination file %s: %w", dst, err)
+	}
+	defer dstFile.Close()
+
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("error copying %s to %s: %w", src, dst, err)
+	}
+	return nil
 }
 
 func (d *Downloder) download(desc string,
@@ -232,13 +253,7 @@ func (d *Downloder) download(desc string,
 		var linkErr *os.LinkError
 		if errors.As(err, &linkErr) {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
-			var tempInput []byte
-			tempInput, err = os.ReadFile(tmpname)
-			if err != nil {
-				return fmt.Errorf("error reading temporary file %s: %w",
-					tmpname, err)
-			}
-			err = os.WriteFile(destination, tempInput, mode)
+			err = copyFile(tmpname, destination, mode)
 		}
 	} else {
 		err = os.Chmod(destination, mode)
