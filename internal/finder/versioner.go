@@ -110,7 +110,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 
 	if !allowDownload {
 		if useLatestIfNoCompatible {
-			all := v.kFinder.AllKubectlBinaries(true /* reverseSort */)
+			all := v.kFinder.AllKubectlBinaries(true) // newest-first
 			if len(all) > 0 {
 				return all[0].Path, nil
 			}
