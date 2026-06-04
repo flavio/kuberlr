@@ -21,11 +21,10 @@ builds:
       - s390x
     hooks:
       post:
-        - sh -c "cosign sign-blob --yes --output-certificate dist/{{ .ProjectName }}_{{ .Version }}_{{ .Target }}.pem --output-signature dist/{{ .ProjectName }}_{{ .Version }}_{{ .Target }}.sig {{ .Path }}"
+        - sh -c "cosign sign-blob --yes --bundle dist/{{ .ProjectName }}_{{ .Version }}_{{ .Target }}.bundle {{ .Path }}"
 release:
   extra_files:
-    - glob: dist/*.sig
-    - glob: dist/*.pem
+    - glob: dist/*.bundle
 universal_binaries:
   - replace: false
 archives:
