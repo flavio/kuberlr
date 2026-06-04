@@ -80,7 +80,7 @@ release:
 .PHONY: go-version-check
 go-version-check:
 	@[ $(GO_VERSION_MAJ) -ge 2 ] || \
-		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 20 ] || (echo "FATAL: Go version should be >= 1.20.x" ; exit 1 ; )
+		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 26 ] || (echo "FATAL: Go version should be >= 1.26.x" ; exit 1 ; )
 
 .PHONY: lint
 lint: golangci-lint
