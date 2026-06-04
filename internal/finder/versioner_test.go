@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -33,6 +34,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 		expectedToMakeDownloads  bool
 		downloadAllowed          bool
 		expectsError             bool
+		useLatestIfNoCompatible  bool
 	}{
 		{
 			name:                     "requested version can be satisfied by already downloaded kubectl binary",
@@ -40,6 +42,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			requestedVersion:         semver.MustParse("1.30.2"),
 			expectedToMakeDownloads:  false,
 			downloadAllowed:          true,
+			useLatestIfNoCompatible:  false,
 			expectsError:             false,
 		},
 		{
@@ -48,6 +51,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			requestedVersion:         semver.MustParse("1.9.0"),
 			expectedToMakeDownloads:  true,
 			downloadAllowed:          true,
+			useLatestIfNoCompatible:  false,
 			expectsError:             false,
 		},
 		{
@@ -56,6 +60,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			requestedVersion:         semver.MustParse("2.4.0"),
 			expectedToMakeDownloads:  true,
 			downloadAllowed:          true,
+			useLatestIfNoCompatible:  false,
 			expectsError:             false,
 		},
 		{
@@ -64,6 +69,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 			requestedVersion:         semver.MustParse("2.4.0"),
 			expectedToMakeDownloads:  false,
 			downloadAllowed:          false,
+			useLatestIfNoCompatible:  false,
 			expectsError:             true,
 		},
 	}
@@ -98,7 +104,7 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 				preventRecursiveInvocationEnvName: fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100)),
 			}
 
-			_, err := versioner.EnsureCompatibleKubectlAvailable(requestedVersion, tt.downloadAllowed)
+			_, err := versioner.EnsureCompatibleKubectlAvailable(requestedVersion, tt.downloadAllowed, tt.useLatestIfNoCompatible)
 			if tt.expectsError {
 				assert.Error(t, err)
 			} else {
@@ -323,4 +329,85 @@ func TestFindCompatibleKubectl(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test: no compatible client, downloads disabled, opt-in enabled -> newest local is used.
+func TestEnsureCompatibleKubectlAvailable_FallbackToNewest_WhenOptIn(t *testing.T) {
+	t.Parallel()
+
+	// newest-first, none compatible with server version 1.24.0
+	kubectlBins := KubectlBinaries{
+		{Version: semver.MustParse("1.30.1"), Path: "/bin/kubectl-1.30.1"}, // newest
+		{Version: semver.MustParse("1.29.3"), Path: "/bin/kubectl-1.29.3"},
+		{Version: semver.MustParse("1.27.6"), Path: "/bin/kubectl-1.27.6"},
+	}
+
+	finderMock := NewMockiFinder(t)
+	// AllKubectlBinaries(true) is called once to check compatibility, then again to pick newest
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
+
+	v := &Versioner{kFinder: finderMock}
+
+	got, err := v.EnsureCompatibleKubectlAvailable(
+		semver.MustParse("1.24.0"),
+		/*allowDownload=*/ false,
+		/*useLatestIfNoCompatible=*/ true,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "/bin/kubectl-1.30.1", got)
+}
+
+// Test: opt-in enabled but there are no local binaries -> still an error.
+func TestEnsureCompatibleKubectlAvailable_Fallback_NoLocals(t *testing.T) {
+	t.Parallel()
+
+	finderMock := NewMockiFinder(t)
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(KubectlBinaries{})
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(KubectlBinaries{})
+
+	v := &Versioner{kFinder: finderMock}
+
+	_, err := v.EnsureCompatibleKubectlAvailable(semver.MustParse("1.24.0"), false, true)
+	assert.Error(t, err)
+}
+
+// Download fails → fallback to newest local kubectl when the option is enabled.
+func TestEnsureCompatibleKubectlAvailable_DownloadFails_FallbackToNewest_WhenOptIn(t *testing.T) {
+	t.Parallel()
+
+	// Pick a server version that guarantees "no compatible" among the local set below.
+	requested := semver.MustParse("2.4.0")
+
+	// IMPORTANT: AllKubectlBinaries(true) is expected to return newest-first.
+	kubectlBinsNewestFirst := KubectlBinaries{
+		{Version: semver.MustParse("1.30.1"), Path: "path/to/kubectl-1.30.1"}, // newest
+		{Version: semver.MustParse("1.29.3"), Path: "path/to/kubectl-1.29.3"},
+		{Version: semver.MustParse("1.27.6"), Path: "path/to/kubectl-1.27.6"},
+	}
+
+	finderMock := NewMockiFinder(t)
+	// Versioner may call AllKubectlBinaries(true) before attempting download (to check compatibility)
+	// and again when handling the download error (to pick the newest). Allow two calls.
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBinsNewestFirst)
+	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBinsNewestFirst)
+
+	downloaderMock := NewMockdownloadHelper(t)
+	downloaderMock.EXPECT().
+		GetKubectlBinary(requested, mock.AnythingOfType("string")).
+		Return(errors.New("network unreachable"))
+
+	versioner := Versioner{
+		kFinder:                           finderMock,
+		downloader:                        downloaderMock,
+		preventRecursiveInvocationEnvName: fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100)),
+	}
+
+	got, err := versioner.EnsureCompatibleKubectlAvailable(
+		requested,
+		/*allowDownload=*/ true,
+		/*useLatestIfNoCompatible=*/ true,
+	)
+	require.NoError(t, err)
+	require.Equal(t, "path/to/kubectl-1.30.1", got)
 }

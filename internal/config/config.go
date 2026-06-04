@@ -32,6 +32,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetDefault("SystemPath", common.SystemPath)
 	v.SetDefault("Timeout", DefaultTimeout)
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
+	v.SetDefault("UseLatestIfNoCompatible", false)
 
 	v.SetConfigType("toml")
 
