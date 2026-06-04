@@ -1,6 +1,7 @@
 package finder
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -394,7 +395,7 @@ func TestEnsureCompatibleKubectlAvailable_DownloadFails_FallbackToNewest_WhenOpt
 	downloaderMock := NewMockdownloadHelper(t)
 	downloaderMock.EXPECT().
 		GetKubectlBinary(requested, mock.AnythingOfType("string")).
-		Return(fmt.Errorf("network unreachable"))
+		Return(errors.New("network unreachable"))
 
 	versioner := Versioner{
 		kFinder:                           finderMock,
