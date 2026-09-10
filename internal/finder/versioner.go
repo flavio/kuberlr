@@ -18,6 +18,7 @@ import (
 type downloadHelper interface {
 	GetKubectlBinary(version semver.Version, destination string) error
 	UpstreamStableVersion() (semver.Version, error)
+	UpstreamStableVersionForMinor(major, minor uint64) (semver.Version, error)
 }
 
 type kubeAPIHelper interface {

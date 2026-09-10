@@ -57,6 +57,15 @@ You can invoke the `kuberlr` binary in a direct fashion to access its
 sub-commands. For example, the `kuberlr bins` will print all the `kubectl`
 binaries that are available to the user.
 
+The `kuberlr get` sub-command downloads a specific `kubectl` version. When
+only a `major.minor` version is given (e.g. `kuberlr get 1.36`), kuberlr asks
+the upstream mirror for the most recent patch release of that release line
+(e.g. `1.36.4`) and downloads it. A full `major.minor.patch` version (e.g.
+`kuberlr get 1.36.0`) downloads exactly that release instead. If the most
+recent patch release can't be determined (e.g. the mirror is unreachable, or
+the release line is unknown), kuberlr falls back to downloading patch
+release `0` of that release line.
+
 ## How it works
 
 kuberlr connects to the API server of your kubernetes cluster and figures
