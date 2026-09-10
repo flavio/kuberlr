@@ -1,5 +1,5 @@
-| Go Report                                                                                                                                | Unit tests                                                                                                                                                              | License                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Go Report                                                                                                                                | Unit tests                                                                                                                                                          | License                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [![Go Report Card](https://goreportcard.com/badge/github.com/flavio/kuberlr)](https://goreportcard.com/report/github.com/flavio/kuberlr) | [![tests](https://github.com/flavio/kuberlr/workflows/tests/badge.svg?branch=main)](https://github.com/flavio/kuberlr/actions?query=workflow%3Atests+branch%3Amain) | [![License: Apache 2.0](https://img.shields.io/badge/License-Apache2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0) |
 
 > One kubectl to rule them all,  
@@ -65,6 +65,9 @@ the upstream mirror for the most recent patch release of that release line
 recent patch release can't be determined (e.g. the mirror is unreachable, or
 the release line is unknown), kuberlr falls back to downloading patch
 release `0` of that release line.
+
+The `kuberlr update` sub-command updates local `kubectl` binaries to the
+latest patch release.
 
 ## How it works
 
@@ -152,11 +155,11 @@ KubeMirrorUrl = "https://dl.k8s.io"
 ```
 
 The behaviour can also be adjusted by using environment variables matching the config file:
- | Key                 | Default | ENV                         | Description |
- |---------------------|---------|-----------------------------|-------------|
- | `AllowDownload`     | `true`  | `KUBERLR_ALLOWDOWNLOAD`     | Whether kuberlr may download a compatible `kubectl` from the upstream mirror. |
- | `UseLatestIfNoCompatible` | `false` | `KUBERLR_USELATESTIFNOCOMPATIBLE` When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
- | `SystemPath`         | `/opt/bin`    | `KUBERLR_SYSTEMPATH`        | Additional directory to scan for system-wide `kubectl` binaries. |
- | `KubeMirrorUrl`      | `https://dl.k8s.io`    | `KUBERLR_KUBEMIRRORURL`     | Custom upstream mirror for downloads. |
- | `Timeout`            | `10`    | `KUBERLR_TIMEOUT`           | Timeout (seconds) for contacting the API server to detect version. |
- 
+
+| Key                       | Default             | ENV                                                                                                                                                                                                   | Description                                                                   |
+| ------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `AllowDownload`           | `true`              | `KUBERLR_ALLOWDOWNLOAD`                                                                                                                                                                               | Whether kuberlr may download a compatible `kubectl` from the upstream mirror. |
+| `UseLatestIfNoCompatible` | `false`             | `KUBERLR_USELATESTIFNOCOMPATIBLE` When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
+| `SystemPath`              | `/opt/bin`          | `KUBERLR_SYSTEMPATH`                                                                                                                                                                                  | Additional directory to scan for system-wide `kubectl` binaries.              |
+| `KubeMirrorUrl`           | `https://dl.k8s.io` | `KUBERLR_KUBEMIRRORURL`                                                                                                                                                                               | Custom upstream mirror for downloads.                                         |
+| `Timeout`                 | `10`                | `KUBERLR_TIMEOUT`                                                                                                                                                                                     | Timeout (seconds) for contacting the API server to detect version.            |

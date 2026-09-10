@@ -53,6 +53,7 @@ func newRootCmd() *cobra.Command {
 		NewVersionCmd(),
 		NewBinsCmd(),
 		NewGetCmd(),
+		NewUpdateCmd(),
 		NewKubectlWrapperCmd(),
 	)
 
