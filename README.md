@@ -69,6 +69,15 @@ release `0` of that release line.
 The `kuberlr update` sub-command updates local `kubectl` binaries to the
 latest patch release.
 
+The `kuberlr rm` sub-command removes local `kubectl` binaries. Give one
+version to remove one release, or a `major.minor` version to remove every
+release of that series. Use `--prune` to remove every release except the
+newest patch of each series. Use `--all` to remove every local release. Add
+`--dry-run` to see what a command would remove, without removing anything.
+
+`kuberlr rm` only removes binaries that kuberlr downloaded. It never removes
+system-wide binaries, for example the ones in `/usr/bin`.
+
 ## How it works
 
 kuberlr connects to the API server of your kubernetes cluster and figures
