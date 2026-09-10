@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,6 +83,34 @@ func TestAllKubectlBinaries(t *testing.T) {
 		}, "Expected %+v, got %+v instead", expectedBin.Version, actual[i].Version)
 		assert.Equal(t, expectedBin.Path, actual[i].Path, "Expected %s, got %s instead", expectedBin.Path, actual[i].Path)
 	}
+}
+
+func TestLocalKubectlBinariesAreSortedByVersion(t *testing.T) {
+	t.Parallel()
+
+	td, err := setupFilesystemTest()
+	require.NoError(t, err)
+	defer func() {
+		if err = teardownFilesystemTest(td); err != nil {
+			panic(fmt.Sprintf("Error while tearing down test filesystem: %v\n", err))
+		}
+	}()
+
+	// "1.10.0" sorts before "1.9.0" and "1.28.0" when compared as strings,
+	// but must not when compared as versions.
+	localBins := fakeKubectlBinaries(
+		td.FakeHome,
+		[]string{"1.28.0", "1.9.0", "1.10.0"},
+		&localKubectlNamer{})
+	require.NoError(t, createFakeKubectlBinaries(localBins))
+
+	bins, err := td.Finder.LocalKubectlBinaries()
+	require.NoError(t, err)
+	require.Len(t, bins, 3)
+
+	assert.True(t, bins[0].Version.Equals(semver.MustParse("1.9.0")))
+	assert.True(t, bins[1].Version.Equals(semver.MustParse("1.10.0")))
+	assert.True(t, bins[2].Version.Equals(semver.MustParse("1.28.0")))
 }
 
 func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
