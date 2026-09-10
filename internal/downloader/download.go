@@ -148,7 +148,7 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 }
 
 // copyFile copies the contents of src to dst with the given file mode.
-// It is used as a fallback when os.Rename fails due to a cross-device link error.
+// It is used as a fallback when [os.Rename] fails due to a cross-device link error.
 func copyFile(src, dst string, mode os.FileMode) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -250,8 +250,7 @@ func (d *Downloder) download(desc string,
 
 	err = os.Rename(tmpname, destination)
 	if err != nil {
-		var linkErr *os.LinkError
-		if errors.As(err, &linkErr) {
+		if linkErr, ok := errors.AsType[*os.LinkError](err); ok {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
 			err = copyFile(tmpname, destination, mode)
 		}

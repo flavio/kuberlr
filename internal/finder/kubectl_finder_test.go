@@ -48,6 +48,8 @@ func teardownFilesystemTest(td localCacheTestData) error {
 }
 
 func TestAllKubectlBinaries(t *testing.T) {
+	t.Parallel()
+
 	td, err := setupFilesystemTest()
 	require.NoError(t, err)
 	defer func() {
@@ -83,6 +85,8 @@ func TestAllKubectlBinaries(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
+	t.Parallel()
+
 	td, err := setupFilesystemTest()
 	require.NoError(t, err)
 	defer func() {
@@ -97,6 +101,8 @@ func TestLocalKubectlVersionsEmptyCache(t *testing.T) {
 }
 
 func TestLocalKubectlVersionsDownloadDirNotCreated(t *testing.T) {
+	t.Parallel()
+
 	td, err := setupFilesystemTest()
 	require.NoError(t, err)
 	defer func() {

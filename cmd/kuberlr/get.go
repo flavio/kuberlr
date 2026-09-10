@@ -5,9 +5,10 @@ import (
 	"path/filepath"
 
 	"github.com/blang/semver/v4"
+	"github.com/spf13/cobra"
+
 	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
-	"github.com/spf13/cobra"
 )
 
 // NewGetCmd creates a new `kuberlr get` cobra command.

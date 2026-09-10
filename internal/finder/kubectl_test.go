@@ -7,6 +7,8 @@ import (
 )
 
 func TestSortAsc(t *testing.T) {
+	t.Parallel()
+
 	bin1 := KubectlBinary{
 		Path:    "b1",
 		Version: semver.MustParse("1.0.0"),
@@ -35,6 +37,8 @@ func TestSortAsc(t *testing.T) {
 }
 
 func TestSortDesc(t *testing.T) {
+	t.Parallel()
+
 	bin1 := KubectlBinary{
 		Path:    "b1",
 		Version: semver.MustParse("1.0.0"),

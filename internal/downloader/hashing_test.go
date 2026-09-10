@@ -10,6 +10,8 @@ import (
 )
 
 func TestHashing(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		version        string
@@ -36,6 +38,8 @@ func TestHashing(t *testing.T) {
 	for _, test := range tests {
 		tableTest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(tableTest.name, func(t *testing.T) {
+			t.Parallel()
+
 			version, err := semver.Parse(tableTest.version)
 			if err != nil {
 				t.Fatalf("failed to parse version %s: %v", tableTest.version, err)
