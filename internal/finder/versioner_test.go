@@ -254,6 +254,67 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 	}
 }
 
+func TestMostRecentKubectlVersionAvailableOrLatestFromUpstreamNeverContactsTheAPIServer(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                         string
+		kubectlAvailableVersions     []string
+		latestUpstreamKubectlVersion semver.Version
+		expectedVersion              semver.Version
+	}{
+		{
+			name:                         "uses the newest kubectl already available locally",
+			kubectlAvailableVersions:     []string{"1.4.0", "1.2.0"},
+			latestUpstreamKubectlVersion: semver.Version{}, // should not be used
+			expectedVersion:              semver.MustParse("1.4.0"),
+		},
+		{
+			name:                         "no local kubectl binary, falls back to the latest upstream stable version",
+			kubectlAvailableVersions:     []string{},
+			latestUpstreamKubectlVersion: semver.MustParse("1.4.0"),
+			expectedVersion:              semver.MustParse("1.4.0"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			expectedVersion := tt.expectedVersion
+			kubectlBins := KubectlBinaries{}
+			for _, version := range tt.kubectlAvailableVersions {
+				kubectlBins = append(kubectlBins, KubectlBinary{
+					Version: semver.MustParse(version),
+					Path:    fmt.Sprintf("path/to/kubectl-%s", version),
+				})
+			}
+
+			finderMock := NewMockiFinder(t)
+			finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBins)
+
+			downloaderMock := NewMockdownloadHelper(t)
+			if len(tt.kubectlAvailableVersions) == 0 {
+				downloaderMock.EXPECT().UpstreamStableVersion().Return(tt.latestUpstreamKubectlVersion, nil)
+			}
+
+			// apiMock has no expectations set: mockery fails the test if the
+			// API server is contacted, which is exactly what must not happen.
+			apiMock := NewMockkubeAPIHelper(t)
+
+			versioner := Versioner{
+				kFinder:                           finderMock,
+				apiServer:                         apiMock,
+				downloader:                        downloaderMock,
+				preventRecursiveInvocationEnvName: fmt.Sprintf("KUBERLR_RESOLVING_VERSION_%d", rand.Intn(100)),
+			}
+
+			actual, err := versioner.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
+			require.NoError(t, err)
+			assert.Equal(t, expectedVersion, actual, "got %s instead of %s", actual, expectedVersion)
+		})
+	}
+}
+
 func TestFindCompatibleKubectl(t *testing.T) {
 	t.Parallel()
 
