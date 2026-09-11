@@ -24,3 +24,22 @@ Timeout = 5
 # Default "https://dl.k8s.io"
 KubeMirrorUrl = "https://dl.k8s.io"
 
+
+# How much kuberlr says on stderr about what it is doing.
+#   0: informational messages, warnings and errors (default)
+#   1: also debug messages, e.g. why the remote kubernetes version could not be detected
+#   2: also trace messages, the most detailed level
+# Default 0
+Verbosity = 0
+
+# Hide informational messages and the download progress bar, only show
+# warnings and errors. Takes precedence over Verbosity.
+# Default false
+Quiet = false
+
+# When to use colors in the messages printed by kuberlr.
+#   "auto":   only when stderr is a terminal and the NO_COLOR environment variable is not set
+#   "always": unconditionally
+#   "never":  disable colors
+# Default "auto"
+Color = "auto"

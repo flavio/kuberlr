@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/flavio/kuberlr/internal/finder"
+	"github.com/flavio/kuberlr/internal/logger"
 )
 
 // NewUpdateCmd creates a new `kuberlr update` cobra command.
@@ -22,9 +22,10 @@ func NewUpdateCmd() *cobra.Command {
   exists, kuberlr downloads it. Old patch releases stay on disk:
   $ kuberlr update`,
 		SilenceUsage: true,
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			log := logger.FromContext(cmd.Context())
 			kubectlFinder := finder.NewKubectlFinder("", "")
-			versioner := finder.NewVersioner(kubectlFinder)
+			versioner := finder.NewVersioner(kubectlFinder, log)
 
 			actions, err := versioner.PlanUpdates()
 			if err != nil {
@@ -54,7 +55,7 @@ func NewUpdateCmd() *cobra.Command {
 					a.Series, a.Installed, a.Latest)
 
 				if _, dlErr := versioner.DownloadKubectl(a.Latest); dlErr != nil {
-					fmt.Fprintf(os.Stderr, "Error: failed to download kubectl %s: %v\n", a.Latest, dlErr)
+					log.Error("failed to download kubectl", "version", a.Latest, "error", dlErr)
 					failed = true
 				}
 			}

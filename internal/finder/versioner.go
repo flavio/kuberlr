@@ -10,9 +10,9 @@ import (
 	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/downloader"
 	"github.com/flavio/kuberlr/internal/kubehelper"
+	"github.com/flavio/kuberlr/internal/logger"
 
 	"github.com/blang/semver/v4"
-	"k8s.io/klog"
 )
 
 type downloadHelper interface {
@@ -35,17 +35,28 @@ type Versioner struct {
 	kFinder                           iFinder
 	downloader                        downloadHelper
 	apiServer                         kubeAPIHelper
+	logger                            *logger.Logger
 	preventRecursiveInvocationEnvName string
 }
 
 // NewVersioner is an helper function that creates a new Versioner instance.
-func NewVersioner(f iFinder) *Versioner {
+// Messages meant for the user are emitted through the given logger.
+func NewVersioner(f iFinder, log *logger.Logger) *Versioner {
 	return &Versioner{
 		kFinder:                           f,
-		downloader:                        &downloader.Downloder{},
+		downloader:                        &downloader.Downloder{Logger: log},
 		apiServer:                         &kubehelper.KubeAPI{},
+		logger:                            log,
 		preventRecursiveInvocationEnvName: PreventRecursiveInvocationEnvName,
 	}
+}
+
+// log returns the logger to use, falling back to a silent one when none was set.
+func (v *Versioner) log() *logger.Logger {
+	if v.logger == nil {
+		return logger.Discard()
+	}
+	return v.logger
 }
 
 const PreventRecursiveInvocationEnvName = "KUBERLR_RESOLVING_VERSION"
@@ -64,7 +75,7 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 
 	_, recursiveInvocationDetected := os.LookupEnv(v.preventRecursiveInvocationEnvName)
 	if recursiveInvocationDetected {
-		klog.V(common.VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
+		v.log().Trace("client-go invoked kubectl to authenticate, preventing kuberlr endless recursion loop")
 		return v.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 
@@ -78,9 +89,9 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		if isUnreachable(err) {
 			// the remote server is unreachable, let's get
 			// the latest version of kubectl that is available on the system
-			klog.V(common.VerbosityTwo).Info("Remote kubernetes server unreachable")
+			v.log().Trace("remote kubernetes server unreachable, falling back to the newest kubectl available", "error", err)
 		} else {
-			klog.V(common.VerbosityOne).Info(err)
+			v.log().Debug("cannot detect the remote kubernetes version, falling back to the newest kubectl available", "error", err)
 		}
 		return v.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
@@ -100,7 +111,7 @@ func (v *Versioner) MostRecentKubectlVersionAvailableOrLatestFromUpstream() (sem
 		return kubectl.Version, nil
 	}
 
-	klog.V(common.VerbosityTwo).Info("No local kubectl binary found, fetching latest stable release version")
+	v.log().Trace("no local kubectl binary found, fetching the latest stable release version from upstream")
 	return v.downloader.UpstreamStableVersion()
 }
 
@@ -124,15 +135,15 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 		return "", errors.New("the right kubectl is missing, binary downloads from kubernetes' upstream mirror are disabled")
 	}
 
-	klog.Infof("Right kubectl missing, downloading version %s", version.String())
+	v.log().Debug("no compatible kubectl found locally", "requested", version)
 
 	filename, err := v.DownloadKubectl(version)
 	if err != nil {
 		if useLatestIfNoCompatible {
 			all := v.kFinder.AllKubectlBinaries(true) // newest-first
 			if len(all) > 0 {
-				klog.Infof("download failed (%v); falling back to newest local kubectl %s at %s",
-					err, all[0].Version, all[0].Path)
+				v.log().Warn("download failed, falling back to the newest local kubectl",
+					"error", err, "version", all[0].Version, "path", all[0].Path)
 				return all[0].Path, nil
 			}
 		}

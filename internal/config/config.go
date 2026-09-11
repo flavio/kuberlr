@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/flavio/kuberlr/internal/common"
+	"github.com/flavio/kuberlr/internal/logger"
 )
 
 const DefaultTimeout = 5
@@ -33,6 +34,9 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetDefault("Timeout", DefaultTimeout)
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 	v.SetDefault("UseLatestIfNoCompatible", false)
+	v.SetDefault("Verbosity", logger.VerbosityDefault)
+	v.SetDefault("Quiet", false)
+	v.SetDefault("Color", string(logger.ColorAuto))
 
 	v.SetConfigType("toml")
 
@@ -62,6 +66,19 @@ func (c *Cfg) GetKubeMirrorURL() (string, error) {
 	}
 
 	return v.GetString("KubeMirrorUrl"), nil
+}
+
+// LoggerOptions builds the terminal output options from the loaded
+// configuration. An invalid "Color" value is reported as an error; the
+// returned options are still usable and fall back to automatic color detection.
+func LoggerOptions(v *viper.Viper) (logger.Options, error) {
+	color, err := logger.ParseColorMode(v.GetString("Color"))
+
+	return logger.Options{
+		Verbosity: v.GetInt("Verbosity"),
+		Quiet:     v.GetBool("Quiet"),
+		Color:     color,
+	}, err
 }
 
 func mergeConfig(v *viper.Viper, cfgFile string) error {

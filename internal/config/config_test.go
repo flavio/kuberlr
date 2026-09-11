@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/flavio/kuberlr/internal/logger"
 )
 
 type testData struct {
@@ -202,5 +204,100 @@ AllowDownload = true
 		t.Errorf(
 			"Wrong value for Timeout: got %v instead of %v",
 			v.GetString("SystemPath"), "global")
+	}
+}
+
+func TestLoggerOptionsDefaults(t *testing.T) {
+	t.Parallel()
+
+	c := Cfg{Paths: []string{}}
+	v, err := c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+
+	opts, err := LoggerOptions(v)
+	if err != nil {
+		t.Fatalf("Unexpected error building logger options: %v", err)
+	}
+
+	want := logger.Options{Verbosity: logger.VerbosityDefault, Quiet: false, Color: logger.ColorAuto}
+	if opts != want {
+		t.Errorf("Wrong UI options: got %+v instead of %+v", opts, want)
+	}
+}
+
+func TestLoggerOptionsFromFile(t *testing.T) {
+	t.Parallel()
+
+	td, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown(td)
+
+	err = writeConfig(td.FakeHome, `
+Verbosity = 2
+Quiet = true
+Color = "never"
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := Cfg{Paths: []string{filepath.Join(td.FakeHome, "kuberlr.conf")}}
+	v, err := c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+
+	opts, err := LoggerOptions(v)
+	if err != nil {
+		t.Fatalf("Unexpected error building logger options: %v", err)
+	}
+
+	want := logger.Options{Verbosity: 2, Quiet: true, Color: logger.ColorNever}
+	if opts != want {
+		t.Errorf("Wrong UI options: got %+v instead of %+v", opts, want)
+	}
+}
+
+func TestLoggerOptionsFromEnvironment(t *testing.T) {
+	t.Setenv("KUBERLR_VERBOSITY", "1")
+	t.Setenv("KUBERLR_QUIET", "true")
+	t.Setenv("KUBERLR_COLOR", "always")
+
+	c := Cfg{Paths: []string{}}
+	v, err := c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+
+	opts, err := LoggerOptions(v)
+	if err != nil {
+		t.Fatalf("Unexpected error building logger options: %v", err)
+	}
+
+	want := logger.Options{Verbosity: 1, Quiet: true, Color: logger.ColorAlways}
+	if opts != want {
+		t.Errorf("Wrong UI options: got %+v instead of %+v", opts, want)
+	}
+}
+
+func TestLoggerOptionsInvalidColor(t *testing.T) {
+	t.Setenv("KUBERLR_COLOR", "rainbow")
+
+	c := Cfg{Paths: []string{}}
+	v, err := c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+
+	opts, err := LoggerOptions(v)
+	if err == nil {
+		t.Fatal("Expected an error for an invalid Color value")
+	}
+	if opts.Color != logger.ColorAuto {
+		t.Errorf("Expected fallback to %q, got %q", logger.ColorAuto, opts.Color)
 	}
 }
