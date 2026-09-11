@@ -10,7 +10,10 @@ import (
 
 	"github.com/flavio/kuberlr/internal/osexec"
 
+	"github.com/blang/semver/v4"
+
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
 )
@@ -72,7 +75,14 @@ func kubectlWrapperMode(args []string) {
 
 	kubectlFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
 	versioner := finder.NewVersioner(kubectlFinder)
-	version, err := versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
+
+	var version semver.Version
+	if finder.IsLocalOnlyCommand(args) {
+		klog.V(common.VerbosityTwo).Info("kubectl command does not need to talk to the API server, skipping remote version check")
+		version, err = versioner.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
+	} else {
+		version, err = versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
+	}
 	if err != nil {
 		klog.Fatalf("kuberlr: find kubectl version to use: %v", err)
 	}

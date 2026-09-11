@@ -108,6 +108,14 @@ configuration file.
 The `execve` syscall is not available on Windows. On this platform another
 approach is used, but the end result doesn't change. (٭)
 
+Some `kubectl` commands never talk to the API server: `config`, `completion`,
+`kuberc`, `plugin`, `kustomize`, `options`, `help`, `version --client` and the
+hidden commands used by shell completion. kuberlr recognizes these commands by
+looking at the first argument and skips the remote version lookup for them.
+It runs the newest `kubectl` binary already available on the system instead.
+If a global flag comes before the command (for example
+`kubectl --context foo config view`), kuberlr uses the normal lookup.
+
 ## Reusing system-wide kubectl binaries
 
 As pointed above kuberlr looks for a compatible kubectl binary both at user

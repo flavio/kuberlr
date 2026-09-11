@@ -65,7 +65,7 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 	_, recursiveInvocationDetected := os.LookupEnv(v.preventRecursiveInvocationEnvName)
 	if recursiveInvocationDetected {
 		klog.V(common.VerbosityTwo).Info("client-go invoked kubectl to authenticate. Preventing kuberlr endless recursion loop.")
-		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
+		return v.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 
 	if err := os.Setenv(v.preventRecursiveInvocationEnvName, "1"); err != nil {
@@ -82,15 +82,19 @@ func (v *Versioner) KubectlVersionToUse(timeout int64) (semver.Version, error) {
 		} else {
 			klog.V(common.VerbosityOne).Info(err)
 		}
-		return v.mostRecentKubectlVersionAvailableOrLatestFromUpstream()
+		return v.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	}
 	return version, err
 }
 
-// mostRecentKubectlVersionAvailableOrLatestFromUpstream returns the most recent version of kubectl
+// MostRecentKubectlVersionAvailableOrLatestFromUpstream returns the most recent version of kubectl
 // available on the system. If no kubectl binary is found, it will download the
 // latest stable version from the upstream mirror.
-func (v *Versioner) mostRecentKubectlVersionAvailableOrLatestFromUpstream() (semver.Version, error) {
+//
+// It never contacts the Kubernetes API server, so it is safe to use for
+// kubectl commands that never need to talk to the cluster (see
+// IsLocalOnlyCommand).
+func (v *Versioner) MostRecentKubectlVersionAvailableOrLatestFromUpstream() (semver.Version, error) {
 	bins := v.kFinder.AllKubectlBinaries(true)
 	if kubectl, err := mostRecentKubectlAvailable(bins); err == nil {
 		return kubectl.Version, nil
