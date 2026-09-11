@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/flavio/kuberlr/internal/finder"
+	"github.com/flavio/kuberlr/internal/logger"
 )
 
 // NewGetCmd creates a new `kuberlr get` cobra command.
@@ -26,8 +26,9 @@ func NewGetCmd() *cobra.Command {
 
   You can write the version with or without the 'v' prefix:
   $ kuberlr get v1.19.1`,
-		RunE: func(_ *cobra.Command, args []string) error {
-			versioner := finder.NewVersioner(finder.NewKubectlFinder("", ""))
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log := logger.FromContext(cmd.Context())
+			versioner := finder.NewVersioner(finder.NewKubectlFinder("", ""), log)
 
 			res, err := versioner.ResolveVersion(args[0])
 			if err != nil {
@@ -36,11 +37,12 @@ func NewGetCmd() *cobra.Command {
 
 			switch {
 			case res.LookupErr != nil:
-				fmt.Fprintf(os.Stderr,
-					"Warning: could not determine latest patch release of %d.%d (%v), defaulting to %d.%d.0\n",
-					res.Requested.Major, res.Requested.Minor, res.LookupErr, res.Requested.Major, res.Requested.Minor)
+				log.Warn("could not determine the latest patch release, defaulting to .0",
+					"series", fmt.Sprintf("%d.%d", res.Requested.Major, res.Requested.Minor),
+					"version", res.Version,
+					"error", res.LookupErr)
 			case res.LookedUp:
-				fmt.Fprintf(os.Stderr, "Resolved %s to v%s\n", args[0], res.Version)
+				log.Info("resolved version", "requested", args[0], "version", res.Version)
 			}
 
 			_, err = versioner.DownloadKubectl(res.Version)

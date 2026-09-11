@@ -16,11 +16,11 @@ import (
 
 	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/config"
+	"github.com/flavio/kuberlr/internal/logger"
 	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver/v4"
 	"github.com/schollz/progressbar/v3"
-	"k8s.io/klog"
 )
 
 func getKubeMirrorURL() (string, error) {
@@ -30,7 +30,19 @@ func getKubeMirrorURL() (string, error) {
 
 // Downloder is a helper class that is used to interact with the
 // kubernetes infrastructure holding released binaries and release information.
-type Downloder struct{}
+type Downloder struct {
+	// Logger receives the messages meant for the user, e.g. download progress.
+	// When nil, those messages are discarded.
+	Logger *logger.Logger
+}
+
+// log returns the logger to use, falling back to a silent one when none was set.
+func (d *Downloder) log() *logger.Logger {
+	if d.Logger == nil {
+		return logger.Discard()
+	}
+	return d.Logger
+}
 
 func (d *Downloder) getContentsOfURL(url string) (string, error) {
 	//nolint: gosec,noctx // the url is built internally
@@ -50,7 +62,7 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 	v, err := io.ReadAll(res.Body)
 	defer func() {
 		if e := res.Body.Close(); e != nil {
-			klog.V(common.VerbosityTwo).Infof("error closing response body: %v", e)
+			d.log().Trace("error closing response body", "error", e)
 		}
 	}()
 	if err != nil {
@@ -129,8 +141,7 @@ func (d *Downloder) GetKubectlBinary(version semver.Version, destination string)
 			firstErr = err
 		}
 		if common.IsShaMismatch(err) {
-			// Try downloading an older subversion
-			fmt.Fprintf(os.Stderr, "Error on download attempt #%d: %s\n", iter, err)
+			d.log().Warn("download attempt failed, retrying", "attempt", iter, "error", err)
 			time.Sleep(time.Duration(iter*timeToSleepOnRetryPerIter) * time.Second)
 		} else {
 			break
@@ -226,11 +237,15 @@ func (d *Downloder) download(desc string,
 	tmpname := temporaryDestinationFile.Name()
 	defer os.Remove(tmpname)
 
-	// write progress to stderr, writing to stdout would
-	// break bash/zsh/shell completion
-	fmt.Fprintf(os.Stderr, "Downloading %s\n", urlToGet)
+	d.log().Info(fmt.Sprintf("downloading %s from %s", desc, urlToGet))
+
+	// The progress bar is written to stderr: writing to stdout would break
+	// bash/zsh/shell completion. It is hidden when stderr is not a terminal or
+	// when quiet mode is enabled.
+	showProgress := d.log().ShowProgress()
 	bar := progressbar.NewOptions(
 		int(resp.ContentLength),
+		progressbar.OptionSetVisibility(showProgress),
 		progressbar.OptionSetDescription(desc),
 		progressbar.OptionSetWriter(os.Stderr),
 		progressbar.OptionShowBytes(true),
@@ -238,14 +253,16 @@ func (d *Downloder) download(desc string,
 		progressbar.OptionThrottle(10*time.Millisecond), //nolint: mnd // 10ms is a good throttle
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
-			fmt.Fprintln(os.Stderr, " done.")
+			if showProgress {
+				fmt.Fprintln(os.Stderr, " done.")
+			}
 		}),
 	)
 
 	_, err = io.Copy(io.MultiWriter(temporaryDestinationFile, bar, hashing.Hasher), resp.Body)
 	if err != nil {
 		if e := temporaryDestinationFile.Close(); e != nil {
-			klog.V(common.VerbosityTwo).Infof("error closing temporary file: %v", e)
+			d.log().Trace("error closing temporary file", "error", e)
 		}
 		return fmt.Errorf(
 			"error while downloading text of %s into file %s: %w",
@@ -266,7 +283,7 @@ func (d *Downloder) download(desc string,
 	err = os.Rename(tmpname, destination)
 	if err != nil {
 		if linkErr, ok := errors.AsType[*os.LinkError](err); ok {
-			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
+			d.log().Debug("cross-device error trying to rename a file, doing a full copy instead", "error", linkErr)
 			err = copyFile(tmpname, destination, mode)
 		}
 	} else {

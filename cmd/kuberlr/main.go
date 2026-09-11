@@ -6,21 +6,19 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"k8s.io/klog"
+	"github.com/spf13/viper"
 
 	"github.com/flavio/kuberlr/internal/osexec"
 
 	"github.com/blang/semver/v4"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
-	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
+	"github.com/flavio/kuberlr/internal/logger"
 )
 
 func main() {
-	klog.InitFlags(nil)
-
 	binary := osexec.TrimExt(filepath.Base(os.Args[0]))
 	if strings.HasSuffix(binary, "kubectl") {
 		kubectlWrapperMode(os.Args[1:])
@@ -47,9 +45,15 @@ func NewKubectlWrapperCmd() *cobra.Command {
 }
 
 func newRootCmd() *cobra.Command {
+	var output flags.Output
+
 	cmd := &cobra.Command{
 		// grab the base filename if the binary file is link
 		Use: filepath.Base(os.Args[0]),
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+			log := setupOutput(cmd, &output)
+			cmd.SetContext(logger.NewContext(cmd.Context(), log))
+		},
 	}
 
 	cmd.AddCommand(
@@ -61,30 +65,67 @@ func newRootCmd() *cobra.Command {
 		NewKubectlWrapperCmd(),
 	)
 
-	flags.RegisterVerboseFlag(cmd.PersistentFlags())
+	output.Register(cmd.PersistentFlags())
 
 	return cmd
+}
+
+// setupOutput configures the terminal output for the native subcommands and
+// returns the logger to use. Command line flags take precedence over the
+// configuration file and the environment. Problems are reported as warnings,
+// they never prevent the subcommand from running.
+func setupOutput(cmd *cobra.Command, output *flags.Output) *logger.Logger {
+	v, loadErr := config.NewCfg().Load()
+	if loadErr != nil {
+		v = viper.New()
+	}
+
+	opts, colorErr := config.LoggerOptions(v)
+	opts, flagErr := output.Apply(cmd.Flags(), opts)
+
+	log := logger.Setup(opts)
+
+	if loadErr != nil {
+		log.Warn("cannot load configuration, using defaults", "error", loadErr)
+	}
+	if colorErr != nil {
+		log.Warn("ignoring invalid Color setting", "error", colorErr)
+	}
+	if flagErr != nil {
+		log.Warn("ignoring invalid --color flag", "error", flagErr)
+	}
+
+	return log
 }
 
 func kubectlWrapperMode(args []string) {
 	cfg := config.NewCfg()
 	v, err := cfg.Load()
 	if err != nil {
-		klog.Fatalf("kuberlr: load config: %v", err)
+		// the configuration is unusable: set up the default output just to
+		// be able to report the failure
+		log := logger.Setup(logger.Options{})
+		log.Fatalf("cannot load configuration: %v", err)
+	}
+
+	opts, colorErr := config.LoggerOptions(v)
+	log := logger.Setup(opts)
+	if colorErr != nil {
+		log.Warn("ignoring invalid Color setting", "error", colorErr)
 	}
 
 	kubectlFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
-	versioner := finder.NewVersioner(kubectlFinder)
+	versioner := finder.NewVersioner(kubectlFinder, log)
 
 	var version semver.Version
 	if finder.IsLocalOnlyCommand(args) {
-		klog.V(common.VerbosityTwo).Info("kubectl command does not need to talk to the API server, skipping remote version check")
+		log.Trace("kubectl command does not need to talk to the API server, skipping remote version check")
 		version, err = versioner.MostRecentKubectlVersionAvailableOrLatestFromUpstream()
 	} else {
 		version, err = versioner.KubectlVersionToUse(v.GetInt64("Timeout"))
 	}
 	if err != nil {
-		klog.Fatalf("kuberlr: find kubectl version to use: %v", err)
+		log.Fatalf("cannot determine which kubectl version to use: %v", err)
 	}
 
 	kubectlBin, err := versioner.EnsureCompatibleKubectlAvailable(
@@ -93,10 +134,10 @@ func kubectlWrapperMode(args []string) {
 		v.GetBool("UseLatestIfNoCompatible"),
 	)
 	if err != nil {
-		klog.Fatalf("kuberlr: ensure compatible kubectl available: %v", err)
+		log.Fatalf("cannot find a compatible kubectl: %v", err)
 	}
 
 	childArgs := append([]string{kubectlBin}, args...)
 	err = osexec.Exec(kubectlBin, childArgs, os.Environ())
-	klog.Fatalf("kuberlr: execute kubectl binary located at %s: %v", kubectlBin, err)
+	log.Fatalf("cannot execute kubectl binary located at %s: %v", kubectlBin, err)
 }

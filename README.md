@@ -128,6 +128,45 @@ schemes in order to be used:
 - `kubectl<major version>.<minor version>`: this would be handled as kubectl
   version `<major version>.<minor version>.0`
 
+## Output
+
+kuberlr stays silent when everything it needs is already in place. When it has
+something to say, it writes to stderr one line at a time, prefixed with
+`kuberlr:`, so that its messages can be told apart from the ones of `kubectl`:
+
+```
+$ kubectl get pods
+kuberlr: downloading kubectl1.31.4 from https://dl.k8s.io/release/v1.31.4/bin/linux/amd64/kubectl
+kubectl1.31.4 100% |████████████████████████████████████████| (56/56 MB, 12 MB/s) done.
+NAME                     READY   STATUS    RESTARTS   AGE
+...
+```
+
+Warnings and errors are tagged as `warning:` and `error:`. When kuberlr can't
+find or download a suitable `kubectl`, it prints an error and exits with
+status `1`.
+
+Three settings control the output. They can be set in the configuration file
+or through environment variables, see [Configuration](#configuration):
+
+- `Verbosity` (`KUBERLR_VERBOSITY`): `0` (default) shows informational
+  messages, warnings and errors. `1` adds debug messages, for example why
+  the version of the remote cluster couldn't be detected. `2` adds trace
+  messages, including the ones of the kubernetes client library.
+- `Quiet` (`KUBERLR_QUIET`): when `true`, only warnings and errors are shown
+  and the download progress bar is hidden. Handy for scripts and CI.
+- `Color` (`KUBERLR_COLOR`): `auto` (default) uses colors only when stderr is
+  a terminal and the [`NO_COLOR`](https://no-color.org) environment variable is
+  not set. `always` and `never` force the behaviour.
+
+The `kuberlr` sub-commands also accept the `-v/--verbosity`, `-q/--quiet` and
+`--color` flags, which take precedence over the configuration file and the
+environment. The `kubectl` wrapper does not, because `kubectl` has flags with
+the same names: use the environment variables or the configuration file there.
+
+The progress bar is never shown when stderr is not a terminal, e.g. when the
+output is redirected to a file.
+
 ## Configuration
 
 The behaviour of kuberlr can be adjusted by creating a configuration file in
@@ -161,22 +200,37 @@ AllowDownload = true
 UseLatestIfNoCompatible = false
 
 # Directory where kubectl binaries are made accessible to all the users of the system
-SystemPath = "/opt/bin"
+# Default "/usr/bin"
+SystemPath = "/usr/bin"
 
 # Timeout (sec) for requests made against the kubernetes API
-Timeout = 1
+# Default 5
+Timeout = 5
 
 # URL of the upstream mirror where kubectl binaries can be downloaded from
 # Default "https://dl.k8s.io"
 KubeMirrorUrl = "https://dl.k8s.io"
+
+# How much kuberlr says on stderr: 0 (default), 1 (debug) or 2 (trace)
+Verbosity = 0
+
+# Only show warnings and errors, hide the download progress bar
+# Default false
+Quiet = false
+
+# When to use colors: "auto" (default), "always" or "never"
+Color = "auto"
 ```
 
 The behaviour can also be adjusted by using environment variables matching the config file:
 
-| Key                       | Default             | ENV                                                                                                                                                                                                   | Description                                                                   |
-| ------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `AllowDownload`           | `true`              | `KUBERLR_ALLOWDOWNLOAD`                                                                                                                                                                               | Whether kuberlr may download a compatible `kubectl` from the upstream mirror. |
-| `UseLatestIfNoCompatible` | `false`             | `KUBERLR_USELATESTIFNOCOMPATIBLE` When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
-| `SystemPath`              | `/opt/bin`          | `KUBERLR_SYSTEMPATH`                                                                                                                                                                                  | Additional directory to scan for system-wide `kubectl` binaries.              |
-| `KubeMirrorUrl`           | `https://dl.k8s.io` | `KUBERLR_KUBEMIRRORURL`                                                                                                                                                                               | Custom upstream mirror for downloads.                                         |
-| `Timeout`                 | `10`                | `KUBERLR_TIMEOUT`                                                                                                                                                                                     | Timeout (seconds) for contacting the API server to detect version.            |
+| Key                       | Default             | ENV                               | Description                                                                                                                                                         |
+| ------------------------- | ------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AllowDownload`           | `true`              | `KUBERLR_ALLOWDOWNLOAD`           | Whether kuberlr may download a compatible `kubectl` from the upstream mirror.                                                                                       |
+| `UseLatestIfNoCompatible` | `false`             | `KUBERLR_USELATESTIFNOCOMPATIBLE` | When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
+| `SystemPath`              | `/usr/bin`          | `KUBERLR_SYSTEMPATH`              | Additional directory to scan for system-wide `kubectl` binaries.                                                                                                    |
+| `KubeMirrorUrl`           | `https://dl.k8s.io` | `KUBERLR_KUBEMIRRORURL`           | Custom upstream mirror for downloads.                                                                                                                               |
+| `Timeout`                 | `5`                 | `KUBERLR_TIMEOUT`                 | Timeout (seconds) for contacting the API server to detect version.                                                                                                  |
+| `Verbosity`               | `0`                 | `KUBERLR_VERBOSITY`               | How much kuberlr says on stderr: `0`, `1` (debug) or `2` (trace). See [Output](#output).                                                                            |
+| `Quiet`                   | `false`             | `KUBERLR_QUIET`                   | Only show warnings and errors, hide the download progress bar.                                                                                                      |
+| `Color`                   | `auto`              | `KUBERLR_COLOR`                   | When to use colors: `auto`, `always` or `never`.                                                                                                                    |
