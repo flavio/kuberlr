@@ -18,6 +18,7 @@ import (
 type downloadHelper interface {
 	GetKubectlBinary(version semver.Version, destination string) error
 	UpstreamStableVersion() (semver.Version, error)
+	UpstreamStableVersionForMinor(major, minor uint64) (semver.Version, error)
 }
 
 type kubeAPIHelper interface {
@@ -26,6 +27,7 @@ type kubeAPIHelper interface {
 
 type iFinder interface {
 	AllKubectlBinaries(reverseSort bool) KubectlBinaries
+	LocalKubectlBinaries() (KubectlBinaries, error)
 }
 
 // Versioner is used to manage the local kubectl binaries used by kuberlr.
@@ -120,12 +122,8 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 
 	klog.Infof("Right kubectl missing, downloading version %s", version.String())
 
-	// download the right kubectl to the local cache
-	filename := filepath.Join(
-		common.LocalDownloadDir(),
-		common.BuildKubectlNameForLocalBin(version))
-
-	if err = v.downloader.GetKubectlBinary(version, filename); err != nil {
+	filename, err := v.DownloadKubectl(version)
+	if err != nil {
 		if useLatestIfNoCompatible {
 			all := v.kFinder.AllKubectlBinaries(true) // newest-first
 			if len(all) > 0 {
@@ -135,6 +133,20 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 			}
 		}
 		return "", fmt.Errorf("failed to download compatible kubectl: %w", err)
+	}
+
+	return filename, nil
+}
+
+// DownloadKubectl downloads the given kubectl version into the local cache
+// and returns the path of the new binary.
+func (v *Versioner) DownloadKubectl(version semver.Version) (string, error) {
+	filename := filepath.Join(
+		common.LocalDownloadDir(),
+		common.BuildKubectlNameForLocalBin(version))
+
+	if err := v.downloader.GetKubectlBinary(version, filename); err != nil {
+		return "", err
 	}
 
 	return filename, nil

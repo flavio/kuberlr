@@ -16,7 +16,7 @@ func printBinTable(bins finder.KubectlBinaries) {
 	tableWriter.SetOutputMirror(os.Stdout)
 	tableWriter.AppendHeader(table.Row{"#", "Version", "Binary"})
 	for i, b := range bins {
-		tableWriter.AppendRow([]interface{}{i + 1, b.Version, b.Path})
+		tableWriter.AppendRow([]any{i + 1, b.Version, b.Path})
 	}
 	tableWriter.Render()
 }

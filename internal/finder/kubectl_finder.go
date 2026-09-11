@@ -135,5 +135,7 @@ func findKubectlBinaries(path string) (KubectlBinaries, error) {
 		binaries = append(binaries, bin)
 	}
 
+	SortKubectlByVersion(binaries, false)
+
 	return binaries, nil
 }

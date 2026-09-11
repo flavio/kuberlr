@@ -17,12 +17,18 @@ type KubectlBinaries []KubectlBinary
 
 // SortKubectlByVersion sorts a list of KubectlBinary objects using their version
 // attribute. By default objects are sorted ascendantly (from earlier to more
-// recent versions); this can be changed via the `reverse` parameter.
+// recent versions); this can be changed via the `reverse` parameter. When two
+// binaries have the same version, their path is used as a tiebreaker, so the
+// order is always deterministic.
 func SortKubectlByVersion(binaries KubectlBinaries, reverse bool) {
 	sort.Slice(binaries, func(i, j int) bool {
-		if reverse {
-			return binaries[i].Version.GT(binaries[j].Version)
+		vi, vj := binaries[i].Version, binaries[j].Version
+		if vi.Equals(vj) {
+			return binaries[i].Path < binaries[j].Path
 		}
-		return binaries[i].Version.LT(binaries[j].Version)
+		if reverse {
+			return vi.GT(vj)
+		}
+		return vi.LT(vj)
 	})
 }

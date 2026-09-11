@@ -7,6 +7,8 @@ import (
 )
 
 func TestShaError(t *testing.T) {
+	t.Parallel()
+
 	err := &common.ShaMismatchError{URL: "https://example.com/resource-1.2.3", ShaExpected: "abc", ShaActual: "def"}
 	if !common.IsShaMismatch(err) {
 		t.Errorf("Expected error %v to be a ShaMismatchError", err)

@@ -45,6 +45,8 @@ func writeConfig(path, data string) error {
 }
 
 func TestOnlySystemConfigExists(t *testing.T) {
+	t.Parallel()
+
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -74,6 +76,8 @@ func TestOnlySystemConfigExists(t *testing.T) {
 }
 
 func TestHomeConfigOverridesSystemOne(t *testing.T) {
+	t.Parallel()
+
 	td, err := setup()
 	if err != nil {
 		t.Error(err)
@@ -134,6 +138,8 @@ func TestEnvironmentVariables(t *testing.T) {
 }
 
 func TestMergeConfigs(t *testing.T) {
+	t.Parallel()
+
 	td, err := setup()
 	if err != nil {
 		t.Error(err)

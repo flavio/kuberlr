@@ -59,14 +59,15 @@ func (d *Downloder) getContentsOfURL(url string) (string, error) {
 	return string(v), nil
 }
 
-// UpstreamStableVersion returns the latest version of kubernetes that upstream
-// considers stable.
-func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
+// upstreamVersionFromFile fetches the given release marker file (e.g.
+// "stable.txt" or "stable-1.30.txt") from the configured kubernetes mirror
+// and parses its contents as a semver version.
+func (d *Downloder) upstreamVersionFromFile(name string) (semver.Version, error) {
 	baseURL, err := getKubeMirrorURL()
 	if err != nil {
 		return semver.Version{}, err
 	}
-	url, err := url.Parse(baseURL + "/release/stable.txt")
+	url, err := url.Parse(baseURL + "/release/" + name)
 	if err != nil {
 		return semver.Version{}, err
 	}
@@ -76,6 +77,20 @@ func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
 		return semver.Version{}, err
 	}
 	return semver.ParseTolerant(v)
+}
+
+// UpstreamStableVersion returns the latest version of kubernetes that upstream
+// considers stable.
+func (d *Downloder) UpstreamStableVersion() (semver.Version, error) {
+	return d.upstreamVersionFromFile("stable.txt")
+}
+
+// UpstreamStableVersionForMinor returns the latest patch version of the given
+// major.minor release line that upstream considers stable. It returns an
+// error if the given major.minor release line is unknown to upstream (e.g.
+// it does not exist yet, or is old enough to no longer be published).
+func (d *Downloder) UpstreamStableVersionForMinor(major, minor uint64) (semver.Version, error) {
+	return d.upstreamVersionFromFile(fmt.Sprintf("stable-%d.%d.txt", major, minor))
 }
 
 // GetKubectlBinary downloads the kubectl binary identified by the given version
@@ -148,7 +163,7 @@ func (d *Downloder) kubectlDownloadURL(version semver.Version) (string, error) {
 }
 
 // copyFile copies the contents of src to dst with the given file mode.
-// It is used as a fallback when os.Rename fails due to a cross-device link error.
+// It is used as a fallback when [os.Rename] fails due to a cross-device link error.
 func copyFile(src, dst string, mode os.FileMode) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -250,8 +265,7 @@ func (d *Downloder) download(desc string,
 
 	err = os.Rename(tmpname, destination)
 	if err != nil {
-		var linkErr *os.LinkError
-		if errors.As(err, &linkErr) {
+		if linkErr, ok := errors.AsType[*os.LinkError](err); ok {
 			fmt.Fprintf(os.Stderr, "Cross-device error trying to rename a file: %s -- will do a full copy\n", linkErr)
 			err = copyFile(tmpname, destination, mode)
 		}

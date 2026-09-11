@@ -21,16 +21,16 @@ func createKubeClient(timeout int64) (*kubernetes.Clientset, error) {
 			cliKubecontext = os.Args[index+1]
 			continue
 		}
-		if strings.HasPrefix(os.Args[index], "--context=") {
-			cliKubecontext = strings.TrimPrefix(os.Args[index], "--context=")
+		if after, ok := strings.CutPrefix(os.Args[index], "--context="); ok {
+			cliKubecontext = after
 			continue
 		}
 		if index+1 < len(os.Args) && os.Args[index] == "--kubeconfig" {
 			cliKubeconfig = os.Args[index+1]
 			continue
 		}
-		if strings.HasPrefix(os.Args[index], "--kubeconfig=") {
-			cliKubeconfig = strings.TrimPrefix(os.Args[index], "--kubeconfig=")
+		if after, ok := strings.CutPrefix(os.Args[index], "--kubeconfig="); ok {
+			cliKubeconfig = after
 			continue
 		}
 		if os.Args[index] == "--" {

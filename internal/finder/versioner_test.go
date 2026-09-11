@@ -27,6 +27,8 @@ func (e *mockTimeoutError) Timeout() bool {
 }
 
 func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name                     string
 		kubectlAvailableVersions []string
@@ -75,6 +77,8 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			requestedVersion := tt.requestedVersion
 
 			kubectlBins := KubectlBinaries{}
@@ -115,6 +119,8 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 }
 
 func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing.T) {
+	t.Parallel()
+
 	// a special version used later to indicate that we will not query the latest
 	// upstream version
 	upstreamVersionDoNotQuery := semver.MustParse("0.0.0")
@@ -140,6 +146,8 @@ func TestKubectlVersionToUseTimeoutWhenTalkingWithKubernetesAPIServer(t *testing
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			expectedVersion := tt.expectedVersion
 			kubectlBins := KubectlBinaries{}
 			for _, version := range tt.kubectlAvailableVersions {
@@ -247,6 +255,8 @@ func TestKubectlVersionToUseSetsInfiniteRecursionPrevention(t *testing.T) {
 }
 
 func TestFindCompatibleKubectl(t *testing.T) {
+	t.Parallel()
+
 	// a special version used later to indicate that no match is expected
 	noVersionExpected := semver.MustParse("0.0.0")
 
@@ -304,6 +314,8 @@ func TestFindCompatibleKubectl(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			kubectlBins := KubectlBinaries{}
 			for _, version := range tt.kubectlAvailableVersions {
 				kubectlBins = append(kubectlBins, KubectlBinary{
