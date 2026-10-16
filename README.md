@@ -170,7 +170,9 @@ output is redirected to a file.
 ## Configuration
 
 The behaviour of kuberlr can be adjusted by creating a configuration file in
-one of these locations:
+one of these locations.
+
+On Linux and macOS:
 
 1. `/usr/etc/kuberlr.conf`: this is the location used by distributions like
    openSUSE to handle the split between `/etc` and `/usr/etc`. You can find
@@ -180,6 +182,15 @@ one of these locations:
    when `XDG_CONFIG_HOME` is unset)
 1. `$HOME/.kuberlr/kuberlr.conf`
 1. `$KUBERLR_CFG`
+
+On Windows:
+
+1. `%APPDATA%\kuberlr\kuberlr.conf`
+1. `%PROGRAMDATA%\kuberlr\kuberlr.conf`
+1. `%XDG_CONFIG_HOME%\kuberlr\kuberlr.conf` (`%USERPROFILE%\.config\kuberlr\kuberlr.conf`
+   when `XDG_CONFIG_HOME` is unset)
+1. `%USERPROFILE%\.kuberlr\kuberlr.conf`
+1. `%KUBERLR_CFG%`
 
 The configuration files are read in the order written above and merged together.
 Configuration files can override the values defined by the previous ones, or
