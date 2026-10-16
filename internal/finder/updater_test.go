@@ -2,11 +2,13 @@ package finder
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
+
+	"github.com/flavio/kuberlr/internal/common"
 
 	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -219,18 +221,18 @@ func TestDownloadKubectl(t *testing.T) {
 	t.Parallel()
 
 	version := semver.MustParse("1.28.5")
+	localPath := filepath.Join("custom", "kubectl", "dir")
+	expected := filepath.Join(localPath, common.BuildKubectlNameForLocalBin(version))
+
+	finderMock := NewMockiFinder(t)
+	finderMock.EXPECT().LocalPath().Return(localPath)
 
 	downloaderMock := NewMockdownloadHelper(t)
-	downloaderMock.EXPECT().GetKubectlBinary(version, mock.AnythingOfType("string")).RunAndReturn(
-		func(_ semver.Version, destination string) error {
-			assert.Contains(t, destination, "kubectl1.28.5")
-			return nil
-		},
-	)
+	downloaderMock.EXPECT().GetKubectlBinary(version, expected).Return(nil)
 
-	versioner := Versioner{downloader: downloaderMock}
+	versioner := Versioner{kFinder: finderMock, downloader: downloaderMock}
 	path, err := versioner.DownloadKubectl(version)
 
 	require.NoError(t, err)
-	assert.Contains(t, path, "kubectl1.28.5")
+	assert.Equal(t, expected, path)
 }

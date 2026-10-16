@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // SystemPath contains the default path to look for kubectl binaries
@@ -27,14 +28,33 @@ func HomeDir() string {
 	return os.Getenv(HomeDirEnvKey())
 }
 
-// LocalDownloadDir return the path to where kuberlr saves
+// ExpandHome replaces a leading "~" in path with the user home directory.
+func ExpandHome(path string) string {
+	if path == "~" {
+		return HomeDir()
+	}
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~"+string(filepath.Separator)) {
+		return filepath.Join(HomeDir(), path[2:])
+	}
+
+	return path
+}
+
+// LocalRootDir returns the default directory under which kuberlr saves
 // the kubectl binaries downloaded from kubernetes' upstream mirror.
-func LocalDownloadDir() string {
+func LocalRootDir() string {
+	return filepath.Join(HomeDir(), ".kuberlr")
+}
+
+// LocalDownloadDir returns the path to where kuberlr saves the kubectl
+// binaries for the current platform, below root. An empty root means
+// LocalRootDir; a leading "~" is expanded to the user home directory.
+func LocalDownloadDir(root string) string {
+	if root == "" {
+		root = LocalRootDir()
+	}
+	root = ExpandHome(root)
 	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
 
-	return filepath.Join(
-		HomeDir(),
-		".kuberlr",
-		platform,
-	)
+	return filepath.Join(root, platform)
 }

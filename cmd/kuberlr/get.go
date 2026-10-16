@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
 	"github.com/flavio/kuberlr/internal/logger"
 )
@@ -28,7 +29,7 @@ func NewGetCmd() *cobra.Command {
   $ kuberlr get v1.19.1`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logger.FromContext(cmd.Context())
-			versioner := finder.NewVersioner(finder.NewKubectlFinder("", ""), log)
+			versioner := finder.NewVersioner(newKubectlFinder(config.FromContext(cmd.Context())), log)
 
 			res, err := versioner.ResolveVersion(args[0])
 			if err != nil {

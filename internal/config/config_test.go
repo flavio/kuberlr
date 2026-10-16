@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/logger"
 )
 
@@ -204,6 +205,40 @@ AllowDownload = true
 		t.Errorf(
 			"Wrong value for Timeout: got %v instead of %v",
 			v.GetString("SystemPath"), "global")
+	}
+}
+
+func TestDownloadPath(t *testing.T) {
+	t.Parallel()
+
+	c := Cfg{Paths: []string{}}
+	v, err := c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+	if got := v.GetString("DownloadPath"); got != common.LocalRootDir() {
+		t.Errorf("Wrong default for DownloadPath: got %v instead of %v", got, common.LocalRootDir())
+	}
+
+	td, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown(td)
+
+	customPath := filepath.Join(td.FakeHome, "kubectl-bins")
+	err = writeConfig(td.FakeHome, `DownloadPath = '`+customPath+`'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c = Cfg{Paths: []string{filepath.Join(td.FakeHome, "kuberlr.conf")}}
+	v, err = c.Load()
+	if err != nil {
+		t.Fatalf("Unexpected error loading config: %v", err)
+	}
+	if got := v.GetString("DownloadPath"); got != customPath {
+		t.Errorf("Wrong value for DownloadPath: got %v instead of %v", got, customPath)
 	}
 }
 

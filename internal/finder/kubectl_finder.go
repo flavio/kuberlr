@@ -22,7 +22,7 @@ type KubectlFinder struct {
 // NewKubectlFinder returns a properly initialized KubectlFinder object.
 func NewKubectlFinder(local, sys string) *KubectlFinder {
 	if local == "" {
-		local = common.LocalDownloadDir()
+		local = common.LocalDownloadDir("")
 	}
 	if sys == "" {
 		sys = common.SystemPath
@@ -32,6 +32,12 @@ func NewKubectlFinder(local, sys string) *KubectlFinder {
 		localBinaryPath: local,
 		sysBinaryPath:   sys,
 	}
+}
+
+// LocalPath returns the directory holding the kubectl binaries downloaded
+// by kuberlr.
+func (f *KubectlFinder) LocalPath() string {
+	return f.localBinaryPath
 }
 
 // SystemKubectlBinaries returns the list of kubectl binaries that are

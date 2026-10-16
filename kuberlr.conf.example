@@ -16,6 +16,10 @@ UseLatestIfNoCompatible = false
 # Default "/usr/bin"
 SystemPath = "/usr/bin"
 
+# Directory where kuberlr downloads kubectl binaries
+# Default "~/.kuberlr"
+DownloadPath = "~/.kuberlr"
+
 # Timeout (sec) for requests made against the kubernetes API
 # Default 5 seconds
 Timeout = 5

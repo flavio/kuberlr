@@ -28,6 +28,7 @@ type kubeAPIHelper interface {
 type iFinder interface {
 	AllKubectlBinaries(reverseSort bool) KubectlBinaries
 	LocalKubectlBinaries() (KubectlBinaries, error)
+	LocalPath() string
 }
 
 // Versioner is used to manage the local kubectl binaries used by kuberlr.
@@ -157,7 +158,7 @@ func (v *Versioner) EnsureCompatibleKubectlAvailable(version semver.Version, all
 // and returns the path of the new binary.
 func (v *Versioner) DownloadKubectl(version semver.Version) (string, error) {
 	filename := filepath.Join(
-		common.LocalDownloadDir(),
+		v.kFinder.LocalPath(),
 		common.BuildKubectlNameForLocalBin(version))
 
 	if err := v.downloader.GetKubectlBinary(version, filename); err != nil {

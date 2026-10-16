@@ -8,6 +8,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
+	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
 )
 
@@ -27,8 +28,8 @@ func NewBinsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "bins",
 		Short: "Print information about the kubectl binaries found",
-		Run: func(_ *cobra.Command, _ []string) {
-			kubectlFinder := finder.NewKubectlFinder("", "")
+		Run: func(cmd *cobra.Command, _ []string) {
+			kubectlFinder := newKubectlFinder(config.FromContext(cmd.Context()))
 			systemBins, err := kubectlFinder.SystemKubectlBinaries()
 
 			fmt.Printf("%s\n", text.FgGreen.Sprint("system-wide kubectl binaries"))

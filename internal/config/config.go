@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -31,6 +32,7 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
+	v.SetDefault("DownloadPath", common.LocalRootDir())
 	v.SetDefault("Timeout", DefaultTimeout)
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 	v.SetDefault("UseLatestIfNoCompatible", false)
@@ -79,6 +81,26 @@ func LoggerOptions(v *viper.Viper) (logger.Options, error) {
 		Quiet:     v.GetBool("Quiet"),
 		Color:     color,
 	}, err
+}
+
+// configKey is the context key under which the configuration is stored.
+type configKey struct{}
+
+// NewContext returns a copy of ctx carrying the given configuration.
+func NewContext(ctx context.Context, v *viper.Viper) context.Context {
+	return context.WithValue(ctx, configKey{}, v)
+}
+
+// FromContext returns the configuration stored in ctx by NewContext. When ctx
+// carries no configuration, an empty one is returned so callers fall back to
+// the built-in defaults.
+func FromContext(ctx context.Context) *viper.Viper {
+	if ctx != nil {
+		if v, ok := ctx.Value(configKey{}).(*viper.Viper); ok && v != nil {
+			return v
+		}
+	}
+	return viper.New()
 }
 
 func mergeConfig(v *viper.Viper, cfgFile string) error {
