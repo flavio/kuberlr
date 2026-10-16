@@ -176,6 +176,8 @@ one of these locations:
    openSUSE to handle the split between `/etc` and `/usr/etc`. You can find
    more details [here](https://en.opensuse.org/openSUSE:Packaging_UsrEtc).
 1. `/etc/kuberlr.conf`
+1. `$XDG_CONFIG_HOME/kuberlr/kuberlr.conf` (`$HOME/.config/kuberlr/kuberlr.conf`
+   when `XDG_CONFIG_HOME` is unset)
 1. `$HOME/.kuberlr/kuberlr.conf`
 1. `$KUBERLR_CFG`
 

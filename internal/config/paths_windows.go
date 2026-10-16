@@ -13,6 +13,7 @@ import (
 var configFiles = []string{
 	filepath.Join(os.Getenv("APPDATA"), "kuberlr", "kuberlr.conf"),
 	filepath.Join(os.Getenv("PROGRAMDATA"), "kuberlr", "kuberlr.conf"),
+	xdgConfigFile(),
 	filepath.Join(common.HomeDir(), ".kuberlr", "kuberlr.conf"),
 	os.Getenv("KUBERLR_CFG"),
 }
