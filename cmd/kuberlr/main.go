@@ -13,6 +13,7 @@ import (
 	"github.com/blang/semver/v4"
 
 	"github.com/flavio/kuberlr/cmd/kuberlr/flags"
+	"github.com/flavio/kuberlr/internal/common"
 	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
 	"github.com/flavio/kuberlr/internal/logger"
@@ -51,8 +52,17 @@ func newRootCmd() *cobra.Command {
 		// grab the base filename if the binary file is link
 		Use: filepath.Base(os.Args[0]),
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-			log := setupOutput(cmd, &output)
-			cmd.SetContext(logger.NewContext(cmd.Context(), log))
+			// Load returns the built-in defaults when it fails, so the
+			// subcommand can run with those. The failure is reported as a
+			// warning once the logger is ready.
+			v, loadErr := config.NewCfg().Load()
+			log := setupOutput(cmd, &output, v)
+			if loadErr != nil {
+				log.Warn("cannot load configuration, using defaults", "error", loadErr)
+			}
+
+			ctx := config.NewContext(cmd.Context(), v)
+			cmd.SetContext(logger.NewContext(ctx, log))
 		},
 	}
 
@@ -72,22 +82,14 @@ func newRootCmd() *cobra.Command {
 
 // setupOutput configures the terminal output for the native subcommands and
 // returns the logger to use. Command line flags take precedence over the
-// configuration file and the environment. Problems are reported as warnings,
-// they never prevent the subcommand from running.
-func setupOutput(cmd *cobra.Command, output *flags.Output) *logger.Logger {
-	v, loadErr := config.NewCfg().Load()
-	if loadErr != nil {
-		v = viper.New()
-	}
-
+// given configuration. Problems are reported as warnings, they never prevent
+// the subcommand from running.
+func setupOutput(cmd *cobra.Command, output *flags.Output, v *viper.Viper) *logger.Logger {
 	opts, colorErr := config.LoggerOptions(v)
 	opts, flagErr := output.Apply(cmd.Flags(), opts)
 
 	log := logger.Setup(opts)
 
-	if loadErr != nil {
-		log.Warn("cannot load configuration, using defaults", "error", loadErr)
-	}
 	if colorErr != nil {
 		log.Warn("ignoring invalid Color setting", "error", colorErr)
 	}
@@ -96,6 +98,14 @@ func setupOutput(cmd *cobra.Command, output *flags.Output) *logger.Logger {
 	}
 
 	return log
+}
+
+// newKubectlFinder returns a KubectlFinder that looks into the directories
+// set by the configuration.
+func newKubectlFinder(v *viper.Viper) *finder.KubectlFinder {
+	return finder.NewKubectlFinder(
+		common.LocalDownloadDir(v.GetString("DownloadPath")),
+		v.GetString("SystemPath"))
 }
 
 func kubectlWrapperMode(args []string) {
@@ -114,7 +124,7 @@ func kubectlWrapperMode(args []string) {
 		log.Warn("ignoring invalid Color setting", "error", colorErr)
 	}
 
-	kubectlFinder := finder.NewKubectlFinder("", v.GetString("SystemPath"))
+	kubectlFinder := newKubectlFinder(v)
 	versioner := finder.NewVersioner(kubectlFinder, log)
 
 	var version semver.Version

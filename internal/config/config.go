@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -26,17 +27,29 @@ func NewCfg() *Cfg {
 	}
 }
 
-// Load reads the configuration files from disks and merges them.
-func (c *Cfg) Load() (*viper.Viper, error) {
+// Defaults returns a configuration that holds only the built-in default
+// values. It does not read the configuration files or the environment.
+func Defaults() *viper.Viper {
 	v := viper.New()
 	v.SetDefault("AllowDownload", true)
 	v.SetDefault("SystemPath", common.SystemPath)
+	v.SetDefault("DownloadPath", common.LocalRootDir())
 	v.SetDefault("Timeout", DefaultTimeout)
 	v.SetDefault("KubeMirrorUrl", "https://dl.k8s.io")
 	v.SetDefault("UseLatestIfNoCompatible", false)
 	v.SetDefault("Verbosity", logger.VerbosityDefault)
 	v.SetDefault("Quiet", false)
 	v.SetDefault("Color", string(logger.ColorAuto))
+
+	return v
+}
+
+// Load reads the configuration files from disk and merges them on top of
+// the built-in defaults. When a file cannot be read, Load returns the
+// error together with the built-in defaults, so the caller always gets a
+// usable configuration.
+func (c *Cfg) Load() (*viper.Viper, error) {
+	v := Defaults()
 
 	v.SetConfigType("toml")
 
@@ -45,13 +58,9 @@ func (c *Cfg) Load() (*viper.Viper, error) {
 	v.SetEnvPrefix("KUBERLR")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	if len(c.Paths) == 0 {
-		return v, nil
-	}
-
 	for _, path := range c.Paths {
 		if err := mergeConfig(v, path); err != nil {
-			return viper.New(), err
+			return Defaults(), err
 		}
 	}
 
@@ -79,6 +88,25 @@ func LoggerOptions(v *viper.Viper) (logger.Options, error) {
 		Quiet:     v.GetBool("Quiet"),
 		Color:     color,
 	}, err
+}
+
+// configKey is the context key under which the configuration is stored.
+type configKey struct{}
+
+// NewContext returns a copy of ctx carrying the given configuration.
+func NewContext(ctx context.Context, v *viper.Viper) context.Context {
+	return context.WithValue(ctx, configKey{}, v)
+}
+
+// FromContext returns the configuration stored in ctx by NewContext. When ctx
+// carries no configuration, FromContext returns the built-in defaults.
+func FromContext(ctx context.Context) *viper.Viper {
+	if ctx != nil {
+		if v, ok := ctx.Value(configKey{}).(*viper.Viper); ok && v != nil {
+			return v
+		}
+	}
+	return Defaults()
 }
 
 func mergeConfig(v *viper.Viper, cfgFile string) error {

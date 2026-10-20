@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/flavio/kuberlr/internal/finder"
+	"github.com/flavio/kuberlr/internal/config"
 )
 
 // NewRmCmd creates a new `kuberlr rm` cobra command.
@@ -49,13 +49,13 @@ func NewRmCmd() *cobra.Command {
 			}
 			return nil
 		},
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			var arg string
 			if len(args) == 1 {
 				arg = args[0]
 			}
 
-			kubectlFinder := finder.NewKubectlFinder("", "")
+			kubectlFinder := newKubectlFinder(config.FromContext(cmd.Context()))
 
 			removed, err := kubectlFinder.Remove(arg, prune, all, dryRun)
 			for _, path := range removed {

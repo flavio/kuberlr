@@ -16,6 +16,14 @@ UseLatestIfNoCompatible = false
 # Default "/usr/bin"
 SystemPath = "/usr/bin"
 
+# Directory where kuberlr downloads kubectl binaries.
+# kuberlr saves them in a <GOOS>-<GOARCH> subdirectory of this path.
+# A leading "~" is expanded to the user home directory.
+# Make sure that only your user can write to this directory: kuberlr runs
+# the binaries that it finds here.
+# Default "~/.kuberlr"
+DownloadPath = "~/.kuberlr"
+
 # Timeout (sec) for requests made against the kubernetes API
 # Default 5 seconds
 Timeout = 5

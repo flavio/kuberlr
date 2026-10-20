@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"testing"
 
 	"github.com/flavio/kuberlr/internal/common"
@@ -94,9 +95,11 @@ func TestEnsureCompatibleKubectlAvailableDownloadsKubectlBinaryWhenNeeded(t *tes
 
 			downloaderMock := NewMockdownloadHelper(t)
 			if tt.expectedToMakeDownloads && tt.downloadAllowed {
+				localPath := filepath.Join("custom", "kubectl", "dir")
+				finderMock.EXPECT().LocalPath().Return(localPath)
 				downloaderMock.EXPECT().GetKubectlBinary(requestedVersion, mock.AnythingOfType("string")).RunAndReturn(
 					func(_ semver.Version, destination string) error {
-						assert.Contains(t, destination, common.LocalDownloadDir())
+						assert.Equal(t, localPath, filepath.Dir(destination))
 						return nil
 					},
 				)
@@ -464,6 +467,7 @@ func TestEnsureCompatibleKubectlAvailable_DownloadFails_FallbackToNewest_WhenOpt
 	// and again when handling the download error (to pick the newest). Allow two calls.
 	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBinsNewestFirst)
 	finderMock.EXPECT().AllKubectlBinaries(true).Return(kubectlBinsNewestFirst)
+	finderMock.EXPECT().LocalPath().Return("path/to")
 
 	downloaderMock := NewMockdownloadHelper(t)
 	downloaderMock.EXPECT().

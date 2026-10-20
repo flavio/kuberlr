@@ -20,18 +20,26 @@ type KubectlFinder struct {
 }
 
 // NewKubectlFinder returns a properly initialized KubectlFinder object.
+// An empty local or sys selects the default directory. A leading "~" in
+// either argument is expanded to the user home directory.
 func NewKubectlFinder(local, sys string) *KubectlFinder {
 	if local == "" {
-		local = common.LocalDownloadDir()
+		local = common.LocalDownloadDir("")
 	}
 	if sys == "" {
 		sys = common.SystemPath
 	}
 
 	return &KubectlFinder{
-		localBinaryPath: local,
-		sysBinaryPath:   sys,
+		localBinaryPath: common.ExpandHome(local),
+		sysBinaryPath:   common.ExpandHome(sys),
 	}
+}
+
+// LocalPath returns the directory holding the kubectl binaries downloaded
+// by kuberlr.
+func (f *KubectlFinder) LocalPath() string {
+	return f.localBinaryPath
 }
 
 // SystemKubectlBinaries returns the list of kubectl binaries that are

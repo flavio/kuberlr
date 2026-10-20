@@ -145,6 +145,7 @@ the `KUBECONFIG` environment variable.
 
 Once the version of the remote server is know, kuberlr looks for a compatible
 kubectl binary under the `~/.kuberlr/<GOOS>-<GOARCH>/` directory and `/usr/bin`.
+Both directories can be changed, see [Configuration](#configuration).
 
 kuberlr reuses an already existing binary if it respects the kubectl
 version skew policy, otherwise it downloads the right one from the
@@ -272,6 +273,11 @@ UseLatestIfNoCompatible = false
 # Default "/usr/bin"
 SystemPath = "/usr/bin"
 
+# Directory where kuberlr downloads kubectl binaries.
+# kuberlr saves them in a <GOOS>-<GOARCH> subdirectory of this path.
+# Default "~/.kuberlr"
+DownloadPath = "~/.kuberlr"
+
 # Timeout (sec) for requests made against the kubernetes API
 # Default 5
 Timeout = 5
@@ -291,6 +297,16 @@ Quiet = false
 Color = "auto"
 ```
 
+A leading `~` in `DownloadPath` and `SystemPath` is expanded to the user home
+directory.
+
+`DownloadPath` changes only where kuberlr saves the `kubectl` binaries. The
+configuration file stays at `$HOME/.kuberlr/kuberlr.conf`.
+
+CAUTION: Make sure that only your user can write to `DownloadPath`. kuberlr
+runs the binaries that it finds in this directory. If another user can write
+to it, that user can run code as you.
+
 The behaviour can also be adjusted by using environment variables matching the config file:
 
 | Key                       | Default             | ENV                               | Description                                                                                                                                                         |
@@ -298,6 +314,7 @@ The behaviour can also be adjusted by using environment variables matching the c
 | `AllowDownload`           | `true`              | `KUBERLR_ALLOWDOWNLOAD`           | Whether kuberlr may download a compatible `kubectl` from the upstream mirror.                                                                                       |
 | `UseLatestIfNoCompatible` | `false`             | `KUBERLR_USELATESTIFNOCOMPATIBLE` | When **no compatible** local `kubectl` is found, use the **newest local** `kubectl` instead of failing **if downloads are disabled or the download attempt fails**. |
 | `SystemPath`              | `/usr/bin`          | `KUBERLR_SYSTEMPATH`              | Additional directory to scan for system-wide `kubectl` binaries.                                                                                                    |
+| `DownloadPath`            | `~/.kuberlr`        | `KUBERLR_DOWNLOADPATH`            | Directory where kuberlr downloads `kubectl` binaries. Only your user must be able to write to it.                                                                   |
 | `KubeMirrorUrl`           | `https://dl.k8s.io` | `KUBERLR_KUBEMIRRORURL`           | Custom upstream mirror for downloads.                                                                                                                               |
 | `Timeout`                 | `5`                 | `KUBERLR_TIMEOUT`                 | Timeout (seconds) for contacting the API server to detect version.                                                                                                  |
 | `Verbosity`               | `0`                 | `KUBERLR_VERBOSITY`               | How much kuberlr says on stderr: `0`, `1` (debug) or `2` (trace). See [Output](#output).                                                                            |

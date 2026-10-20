@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/flavio/kuberlr/internal/config"
 	"github.com/flavio/kuberlr/internal/finder"
 	"github.com/flavio/kuberlr/internal/logger"
 )
@@ -24,7 +25,7 @@ func NewUpdateCmd() *cobra.Command {
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			log := logger.FromContext(cmd.Context())
-			kubectlFinder := finder.NewKubectlFinder("", "")
+			kubectlFinder := newKubectlFinder(config.FromContext(cmd.Context()))
 			versioner := finder.NewVersioner(kubectlFinder, log)
 
 			actions, err := versioner.PlanUpdates()

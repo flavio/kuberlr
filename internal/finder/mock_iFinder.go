@@ -122,6 +122,51 @@ func (_c *MockiFinder_LocalKubectlBinaries_Call) RunAndReturn(run func() (Kubect
 	return _c
 }
 
+// LocalPath provides a mock function with no fields
+func (_m *MockiFinder) LocalPath() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for LocalPath")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
+// MockiFinder_LocalPath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LocalPath'
+type MockiFinder_LocalPath_Call struct {
+	*mock.Call
+}
+
+// LocalPath is a helper method to define mock.On call
+func (_e *MockiFinder_Expecter) LocalPath() *MockiFinder_LocalPath_Call {
+	return &MockiFinder_LocalPath_Call{Call: _e.mock.On("LocalPath")}
+}
+
+func (_c *MockiFinder_LocalPath_Call) Run(run func()) *MockiFinder_LocalPath_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockiFinder_LocalPath_Call) Return(_a0 string) *MockiFinder_LocalPath_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockiFinder_LocalPath_Call) RunAndReturn(run func() string) *MockiFinder_LocalPath_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockiFinder creates a new instance of MockiFinder. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockiFinder(t interface {
