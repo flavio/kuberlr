@@ -33,20 +33,76 @@ kuberlr can run on Linux, macOS and Windows.
 
 ## Installation
 
+### Manual
+
 You can find pre-built binaries of kuberlr under the
 [GitHub release](https://github.com/flavio/kuberlr/releases) tab.
 
-Put the `kuberlr` binary somewhere in your `PATH` and create a symlink named `kubectl`
-pointing to it.
+#### Linux and macOS
 
-For example, assuming `~/bin` has a high priority inside of your `PATH`:
+1. Put the `kuberlr` binary somewhere in your `PATH`.
+1. Create a `kubectl` symlink as described in
+   [Using kuberlr as kubectl](#using-kuberlr-as-kubectl).
 
+#### Windows
+
+1. Put `kuberlr.exe` in a system-level directory such as
+   `C:\Program Files\kuberlr`.
+1. Add that directory to the top of the system `Path`: from a PowerShell window
+   opened as administrator, run
+   `rundll32.exe sysdm.cpl,EditEnvironmentVariables`, edit `Path` under the
+   system variables, add the directory, and move it to the top. Then restart
+   your terminal.
+1. Create a `kubectl` symlink as described in
+   [Using kuberlr as kubectl](#using-kuberlr-as-kubectl).
+
+## Using kuberlr as kubectl
+
+> **Note:** it's also possible to skip the creation of the symlink and use
+> `kuberlr kubectl` instead.
+
+kuberlr acts as `kubectl` when it's invoked through a symlink named `kubectl`.
+The symlink must be found before any other `kubectl` in your `PATH`.
+
+### Linux and macOS
+
+Create the symlink in a directory that comes before any other `kubectl` in
+your `PATH`. For example, with `~/bin`:
+
+```shell
+ln -s "$(command -v kuberlr)" ~/bin/kubectl
 ```
-$ cp kuberlr /bin/
-$ ln -s ~/bin/kuberlr ~/bin/kubectl
+
+### Windows
+
+Windows searches the system `Path` before the user `Path`, and tools such as
+Docker Desktop add their own `kubectl` to the system `Path`. To stay ahead of
+them, including ones installed later, the symlink goes in a directory at the top
+of the system `Path`. This requires administrator rights; without them, use
+`kuberlr kubectl` instead.
+
+kuberlr must be installed for all users, either manually as described in
+[Installation](#installation) or with
+`winget install flavio.kuberlr --scope machine`.
+
+Open a new PowerShell window as administrator and run:
+
+```powershell
+$dir = "$env:ProgramFiles\kuberlr"
+New-Item -ItemType Directory -Force $dir | Out-Null
+New-Item -ItemType SymbolicLink -Path "$dir\kubectl.exe" -Target (Get-Command kuberlr).Source
 ```
 
-> **Note:** it's also possible to skip the creation of the symlink and use `kuberlr kubectl` instead.
+Then make sure that directory is at the top of the system `Path` (manual
+installs already did this):
+
+1. From the same window, run `rundll32.exe sysdm.cpl,EditEnvironmentVariables`.
+1. Under the system variables, select `Path` and click **Edit**.
+1. If `C:\Program Files\kuberlr` isn't listed, click **New** and enter it.
+1. Select it and click **Move Up** until it's first.
+1. Click **OK** in both windows and restart your terminal.
+
+Run `Get-Command kubectl` to check that it finds the symlink.
 
 ## Usage
 
