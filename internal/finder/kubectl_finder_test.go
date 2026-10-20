@@ -88,7 +88,7 @@ func TestNewKubectlFinder(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range tests { //nolint:paralleltest // uses t.Setenv
 		t.Run(tt.name, func(t *testing.T) {
 			f := NewKubectlFinder(tt.local, tt.sys)
 			assert.Equal(t, tt.expectedLocal, f.localBinaryPath)

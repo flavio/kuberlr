@@ -57,7 +57,7 @@ func TestLocalDownloadDir(t *testing.T) {
 			expected: filepath.Join("~", "bins", platform),
 		},
 	}
-	for _, tt := range tests {
+	for _, tt := range tests { //nolint:paralleltest // uses t.Setenv
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, LocalDownloadDir(tt.root))
 		})

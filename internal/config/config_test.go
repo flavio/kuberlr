@@ -297,7 +297,8 @@ func TestFromContext(t *testing.T) {
 	}
 
 	//nolint:staticcheck // passing a nil context on purpose
-	if got := FromContext(nil); got == nil {
+	got = FromContext(nil)
+	if got == nil {
 		t.Error("Expected the built-in defaults from a nil context")
 	}
 }
