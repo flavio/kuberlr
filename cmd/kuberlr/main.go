@@ -52,7 +52,15 @@ func newRootCmd() *cobra.Command {
 		// grab the base filename if the binary file is link
 		Use: filepath.Base(os.Args[0]),
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-			v, log := setupOutput(cmd, &output)
+			// Load returns the built-in defaults when it fails, so the
+			// subcommand can run with those. The failure is reported as a
+			// warning once the logger is ready.
+			v, loadErr := config.NewCfg().Load()
+			log := setupOutput(cmd, &output, v)
+			if loadErr != nil {
+				log.Warn("cannot load configuration, using defaults", "error", loadErr)
+			}
+
 			ctx := config.NewContext(cmd.Context(), v)
 			cmd.SetContext(logger.NewContext(ctx, log))
 		},
@@ -72,24 +80,16 @@ func newRootCmd() *cobra.Command {
 	return cmd
 }
 
-// setupOutput loads the configuration and configures the terminal output for
-// the native subcommands, returning both. Command line flags take precedence
-// over the configuration file and the environment. Problems are reported as
-// warnings, they never prevent the subcommand from running.
-func setupOutput(cmd *cobra.Command, output *flags.Output) (*viper.Viper, *logger.Logger) {
-	v, loadErr := config.NewCfg().Load()
-	if loadErr != nil {
-		v = viper.New()
-	}
-
+// setupOutput configures the terminal output for the native subcommands and
+// returns the logger to use. Command line flags take precedence over the
+// given configuration. Problems are reported as warnings, they never prevent
+// the subcommand from running.
+func setupOutput(cmd *cobra.Command, output *flags.Output, v *viper.Viper) *logger.Logger {
 	opts, colorErr := config.LoggerOptions(v)
 	opts, flagErr := output.Apply(cmd.Flags(), opts)
 
 	log := logger.Setup(opts)
 
-	if loadErr != nil {
-		log.Warn("cannot load configuration, using defaults", "error", loadErr)
-	}
 	if colorErr != nil {
 		log.Warn("ignoring invalid Color setting", "error", colorErr)
 	}
@@ -97,15 +97,15 @@ func setupOutput(cmd *cobra.Command, output *flags.Output) (*viper.Viper, *logge
 		log.Warn("ignoring invalid --color flag", "error", flagErr)
 	}
 
-	return v, log
+	return log
 }
 
-// newKubectlFinder returns a KubectlFinder looking into the directories set
-// by the configuration.
+// newKubectlFinder returns a KubectlFinder that looks into the directories
+// set by the configuration.
 func newKubectlFinder(v *viper.Viper) *finder.KubectlFinder {
 	return finder.NewKubectlFinder(
 		common.LocalDownloadDir(v.GetString("DownloadPath")),
-		common.ExpandHome(v.GetString("SystemPath")))
+		v.GetString("SystemPath"))
 }
 
 func kubectlWrapperMode(args []string) {

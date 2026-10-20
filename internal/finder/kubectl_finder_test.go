@@ -3,7 +3,11 @@ package finder
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
+
+	"github.com/flavio/kuberlr/internal/common"
 
 	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/assert"
@@ -46,6 +50,51 @@ func teardownFilesystemTest(td localCacheTestData) error {
 		return err1
 	}
 	return err2
+}
+
+func TestNewKubectlFinder(t *testing.T) {
+	fakeHome := filepath.Join("fake", "home")
+	t.Setenv(common.HomeDirEnvKey(), fakeHome)
+
+	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+
+	tests := []struct {
+		name          string
+		local         string
+		sys           string
+		expectedLocal string
+		expectedSys   string
+	}{
+		{
+			name:          "empty arguments select the default directories",
+			local:         "",
+			sys:           "",
+			expectedLocal: filepath.Join(fakeHome, ".kuberlr", platform),
+			expectedSys:   common.SystemPath,
+		},
+		{
+			name:          "a leading tilde is expanded to the user home directory",
+			local:         "~/bins",
+			sys:           "~/sys",
+			expectedLocal: filepath.Join(fakeHome, "bins"),
+			expectedSys:   filepath.Join(fakeHome, "sys"),
+		},
+		{
+			name:          "an absolute path is used as given",
+			local:         filepath.Join("opt", "bins"),
+			sys:           filepath.Join("opt", "sys"),
+			expectedLocal: filepath.Join("opt", "bins"),
+			expectedSys:   filepath.Join("opt", "sys"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := NewKubectlFinder(tt.local, tt.sys)
+			assert.Equal(t, tt.expectedLocal, f.localBinaryPath)
+			assert.Equal(t, tt.expectedSys, f.sysBinaryPath)
+		})
+	}
 }
 
 func TestAllKubectlBinaries(t *testing.T) {

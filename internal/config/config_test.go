@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -208,7 +209,7 @@ AllowDownload = true
 	}
 }
 
-func TestDownloadPath(t *testing.T) {
+func TestDownloadPathDefault(t *testing.T) {
 	t.Parallel()
 
 	c := Cfg{Paths: []string{}}
@@ -219,6 +220,10 @@ func TestDownloadPath(t *testing.T) {
 	if got := v.GetString("DownloadPath"); got != common.LocalRootDir() {
 		t.Errorf("Wrong default for DownloadPath: got %v instead of %v", got, common.LocalRootDir())
 	}
+}
+
+func TestDownloadPathFromFile(t *testing.T) {
+	t.Parallel()
 
 	td, err := setup()
 	if err != nil {
@@ -232,13 +237,68 @@ func TestDownloadPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c = Cfg{Paths: []string{filepath.Join(td.FakeHome, "kuberlr.conf")}}
-	v, err = c.Load()
+	c := Cfg{Paths: []string{filepath.Join(td.FakeHome, "kuberlr.conf")}}
+	v, err := c.Load()
 	if err != nil {
 		t.Fatalf("Unexpected error loading config: %v", err)
 	}
 	if got := v.GetString("DownloadPath"); got != customPath {
 		t.Errorf("Wrong value for DownloadPath: got %v instead of %v", got, customPath)
+	}
+}
+
+func TestLoadReturnsDefaultsOnError(t *testing.T) {
+	t.Parallel()
+
+	td, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown(td)
+
+	err = writeConfig(td.FakeHome, `this is not = valid [toml`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := Cfg{Paths: []string{filepath.Join(td.FakeHome, "kuberlr.conf")}}
+	v, err := c.Load()
+	if err == nil {
+		t.Fatal("Expected an error for an invalid configuration file")
+	}
+	if v == nil {
+		t.Fatal("Expected a usable configuration together with the error")
+	}
+	if got := v.GetInt("Timeout"); got != DefaultTimeout {
+		t.Errorf("Wrong default for Timeout: got %v instead of %v", got, DefaultTimeout)
+	}
+	if got := v.GetString("DownloadPath"); got != common.LocalRootDir() {
+		t.Errorf("Wrong default for DownloadPath: got %v instead of %v", got, common.LocalRootDir())
+	}
+}
+
+func TestFromContext(t *testing.T) {
+	t.Parallel()
+
+	v := Defaults()
+	v.Set("DownloadPath", "/custom")
+
+	ctx := NewContext(context.Background(), v)
+	if got := FromContext(ctx); got != v {
+		t.Error("Expected FromContext to return the configuration stored by NewContext")
+	}
+
+	got := FromContext(context.Background())
+	if got == nil {
+		t.Fatal("Expected the built-in defaults from a context without configuration")
+	}
+	if got.GetInt("Timeout") != DefaultTimeout {
+		t.Errorf("Wrong default for Timeout: got %v instead of %v", got.GetInt("Timeout"), DefaultTimeout)
+	}
+
+	//nolint:staticcheck // passing a nil context on purpose
+	if got := FromContext(nil); got == nil {
+		t.Error("Expected the built-in defaults from a nil context")
 	}
 }
 

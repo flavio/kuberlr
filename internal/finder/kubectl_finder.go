@@ -20,6 +20,8 @@ type KubectlFinder struct {
 }
 
 // NewKubectlFinder returns a properly initialized KubectlFinder object.
+// An empty local or sys selects the default directory. A leading "~" in
+// either argument is expanded to the user home directory.
 func NewKubectlFinder(local, sys string) *KubectlFinder {
 	if local == "" {
 		local = common.LocalDownloadDir("")
@@ -29,8 +31,8 @@ func NewKubectlFinder(local, sys string) *KubectlFinder {
 	}
 
 	return &KubectlFinder{
-		localBinaryPath: local,
-		sysBinaryPath:   sys,
+		localBinaryPath: common.ExpandHome(local),
+		sysBinaryPath:   common.ExpandHome(sys),
 	}
 }
 
