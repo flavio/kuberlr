@@ -1,9 +1,11 @@
-with-expecter: true
-dir: "{{.InterfaceDir}}"
-inpackage: true
+dir: '{{.InterfaceDir}}'
+filename: mocks_test.go
+pkgname: '{{.SrcPackageName}}'
+structname: 'Mock{{.InterfaceName}}'
+template: testify
 packages:
   github.com/flavio/kuberlr/internal/finder:
     interfaces:
-      iFinder:
       downloadHelper:
+      iFinder:
       kubeAPIHelper:

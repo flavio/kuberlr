@@ -24,11 +24,6 @@
       "description": "Group GitHub Actions updates like Dependabot did",
       "groupName": "github-actions",
       "matchManagers": ["github-actions"]
-    },
-    {
-      "description": "mockery v3 changes the config format; stay on v2 until that migration is done on purpose",
-      "matchPackageNames": ["vektra/mockery"],
-      "allowedVersions": "/^v2\\./"
     }
   ],
   "customManagers": [
