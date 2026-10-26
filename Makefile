@@ -80,7 +80,7 @@ release:
 .PHONY: go-version-check
 go-version-check:
 	@[ $(GO_VERSION_MAJ) -ge 2 ] || \
-		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 26 ] || (echo "FATAL: Go version should be >= 1.26.x" ; exit 1 ; )
+		[ $(GO_VERSION_MAJ) -eq 1 -a $(GO_VERSION_MIN) -ge 27 ] || (echo "FATAL: Go version should be >= 1.27.x" ; exit 1 ; )
 
 .PHONY: lint
 lint: golangci-lint
@@ -139,7 +139,7 @@ $(LOCALBIN):
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v2.13.2
+GOLANGCI_LINT_VERSION ?= v2.15.0
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
