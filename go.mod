@@ -1,6 +1,6 @@
 module github.com/flavio/kuberlr
 
-go 1.26.4
+go 1.27.3
 
 require (
 	github.com/blang/semver/v4 v4.0.0
