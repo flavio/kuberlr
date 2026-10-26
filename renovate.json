@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "7 days",
+  "internalChecksFilter": "strict",
+  "labels": ["area/dependencies", "kind/chore"],
+  "postUpdateOptions": ["gomodTidy"],
+  "packageRules": [
+    {
+      "description": "Keep the go directive on the latest Go release",
+      "matchManagers": ["gomod"],
+      "matchDepNames": ["go"],
+      "matchDepTypes": ["golang"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Update the Go toolchain and the dev tools tied to it in one PR, without a cooldown, since these are security-sensitive and can break on a new Go release",
+      "groupName": "Go toolchain",
+      "matchPackageNames": ["go", "golang", "golangci/golangci-lint", "vektra/mockery"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Group GitHub Actions updates like Dependabot did",
+      "groupName": "github-actions",
+      "matchManagers": ["github-actions"]
+    },
+    {
+      "description": "mockery v3 changes the config format; stay on v2 until that migration is done on purpose",
+      "matchPackageNames": ["vektra/mockery"],
+      "allowedVersions": "/^v2\\./"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "golangci-lint version pinned in the Makefile",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": [
+        "GOLANGCI_LINT_VERSION \\?= (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "golangci/golangci-lint",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "mockery version pinned in the Makefile",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": [
+        "MOCKERY_VERSION \\?= (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "vektra/mockery",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}
