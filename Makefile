@@ -142,7 +142,7 @@ MOCKERY = $(LOCALBIN)/mockery-$(MOCKERY_VERSION)
 
 ## Tool Versions
 GOLANGCI_LINT_VERSION ?= v2.15.0
-MOCKERY_VERSION ?= v3.8.1
+MOCKERY_VERSION ?= v3.9.0
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
